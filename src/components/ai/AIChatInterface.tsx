@@ -1,0 +1,372 @@
+import { useState, useRef, useEffect } from "react";
+import { Send, Sparkles, Loader2, Bot, User, X, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import { processUserMessage, ChatMessage, AIIntent } from "@/lib/groq";
+import { useTasks } from "@/hooks/useTasks";
+import { useFinance } from "@/hooks/useFinance";
+import { useNotes } from "@/hooks/useNotes";
+import { useHabits } from "@/hooks/useHabits";
+import { useInventory } from "@/hooks/useInventory";
+import { useStudy } from "@/hooks/useStudy";
+
+export function AIChatInterface() {
+    const [isOpen, setIsOpen] = useState(false);
+    const [input, setInput] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Hooks for executing actions
+    const { addTask, updateTask, deleteTask, tasks } = useTasks();
+    const { addEntry, deleteEntry, expenses } = useFinance();
+    const { addNote, deleteNote, notes } = useNotes();
+    const { addHabit, completeHabit, deleteHabit, habits } = useHabits();
+    const { addItem, deleteItem, items } = useInventory();
+    const { addChapter, updateProgress, deleteChapter, chapters } = useStudy();
+
+    // Load history from localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem("lifeos-chat-history");
+        if (saved) {
+            try {
+                setMessages(JSON.parse(saved));
+            } catch (e) {
+                console.error("Failed to load chat history", e);
+            }
+        }
+    }, []);
+
+    // Save history to localStorage
+    useEffect(() => {
+        if (messages.length > 0) {
+            localStorage.setItem("lifeos-chat-history", JSON.stringify(messages));
+        }
+    }, [messages]);
+
+    // Auto-scroll to bottom
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [messages, isOpen]);
+
+    // Keyboard shortcut
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+                e.preventDefault();
+                setIsOpen((prev) => !prev);
+            }
+            if (e.key === "Escape" && isOpen) {
+                setIsOpen(false);
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isOpen]);
+
+    // Focus input on open
+    useEffect(() => {
+        if (isOpen) {
+            setTimeout(() => inputRef.current?.focus(), 100);
+        }
+    }, [isOpen]);
+
+    const executeIntent = async (intent: AIIntent) => {
+        const { action, data } = intent;
+
+        // Analysis/Chat actions don't need state mutation, just the response text
+        if (["CHAT", "UNKNOWN", "GET_SUMMARY", "ANALYZE_BUDGET"].includes(action)) return;
+
+        try {
+            switch (action) {
+                // TASKS
+                case "ADD_TASK":
+                    await addTask.mutateAsync({
+                        title: data.title as string,
+                        priority: (data.priority as "low" | "medium" | "high") || "medium",
+                        status: "todo",
+                        due_date: data.due_date as string,
+                    });
+                    break;
+                case "COMPLETE_TASK":
+                    const taskToComplete = tasks?.find(t => t.title.toLowerCase().includes((data.title as string || "").toLowerCase()));
+                    if (taskToComplete) await updateTask.mutateAsync({ id: taskToComplete.id, status: "done" });
+                    break;
+                case "DELETE_TASK":
+                    const taskToDelete = tasks?.find(t => t.title.toLowerCase().includes((data.title as string || "").toLowerCase()));
+                    if (taskToDelete) await deleteTask.mutateAsync(taskToDelete.id);
+                    break;
+
+                // FINANCE
+                case "ADD_EXPENSE":
+                    await addEntry.mutateAsync({
+                        type: "expense",
+                        amount: Number(data.amount),
+                        category: data.category as string,
+                        description: data.description as string,
+                    });
+                    break;
+                case "ADD_INCOME":
+                    await addEntry.mutateAsync({
+                        type: "income",
+                        amount: Number(data.amount),
+                        category: data.category as string,
+                        description: data.description as string,
+                    });
+                    break;
+                case "DELETE_EXPENSE":
+                    // Naive matching for now, just finds first match description/amount if provided
+                    // This is risky, but per intent. Ideally we'd list IDs.
+                    // For now, let's just create a generic handler or skip if id not known.
+                    // Actually, let's find by description if possible.
+                    const expenseToDelete = expenses?.find(e =>
+                        (data.description && e.description?.toLowerCase().includes((data.description as string).toLowerCase())) ||
+                        (data.amount && e.amount === Number(data.amount))
+                    );
+                    if (expenseToDelete) await deleteEntry.mutateAsync(expenseToDelete.id);
+                    break;
+
+                // HABITS
+                case "ADD_HABIT":
+                    await addHabit.mutateAsync(data.habit_name as string);
+                    break;
+                case "COMPLETE_HABIT":
+                    const habitToComplete = habits?.find(h => h.habit_name.toLowerCase().includes((data.habit_name as string || "").toLowerCase()));
+                    if (habitToComplete) await completeHabit.mutateAsync(habitToComplete);
+                    break;
+                case "DELETE_HABIT":
+                    const habitToDelete = habits?.find(h => h.habit_name.toLowerCase().includes((data.habit_name as string || "").toLowerCase()));
+                    if (habitToDelete) await deleteHabit.mutateAsync(habitToDelete.id);
+                    break;
+
+                // NOTES
+                case "ADD_NOTE":
+                    await addNote.mutateAsync({
+                        title: data.title as string,
+                        content: data.content as string,
+                        tags: data.tags as string,
+                    });
+                    break;
+                case "DELETE_NOTE":
+                    const noteToDelete = notes?.find(n => n.title.toLowerCase().includes((data.title as string || "").toLowerCase()));
+                    if (noteToDelete) await deleteNote.mutateAsync(noteToDelete.id);
+                    break;
+
+                // INVENTORY
+                case "ADD_INVENTORY":
+                    await addItem.mutateAsync({
+                        item_name: data.item_name as string,
+                        cost: Number(data.cost),
+                        store: data.store as string,
+                    });
+                    break;
+                case "DELETE_INVENTORY":
+                    const itemToDelete = items?.find(i => i.item_name.toLowerCase().includes((data.item_name as string || "").toLowerCase()));
+                    if (itemToDelete) await deleteItem.mutateAsync(itemToDelete.id);
+                    break;
+
+                // STUDY
+                case "ADD_STUDY_CHAPTER":
+                    await addChapter.mutateAsync({
+                        subject: data.subject as string,
+                        chapter_name: data.chapter_name as string,
+                    });
+                    break;
+                case "UPDATE_STUDY_PROGRESS":
+                    const chapterToUpdate = chapters?.find(
+                        (c) =>
+                            c.subject.toLowerCase() === (data.subject as string || "").toLowerCase() &&
+                            c.chapter_name.toLowerCase().includes((data.chapter_name as string || "").toLowerCase())
+                    );
+                    if (chapterToUpdate) {
+                        await updateProgress.mutateAsync({
+                            id: chapterToUpdate.id,
+                            progress_percentage: data.progress_percentage as number,
+                        });
+                    }
+                    break;
+            }
+        } catch (error) {
+            console.error("Action execution failed:", error);
+            throw new Error("Failed to execute action");
+        }
+    };
+
+    const handleSend = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!input.trim() || isLoading) return;
+
+        const userMsg = input.trim();
+        setInput("");
+        setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+        setIsLoading(true);
+
+        try {
+            // Calculate detailed context for AI
+            const activeTasks = tasks?.filter(t => t.status === "todo").map(t => `- [${t.priority}] ${t.title} (Due: ${t.due_date})`).join("\n") || "No active tasks";
+            const recentExpenses = expenses?.slice(0, 10).map(e => `- ${e.type === 'income' ? '+' : '-'}৳${e.amount}: ${e.description} (${e.category})`).join("\n") || "No recent transactions";
+            const habitStatus = habits?.map(h => `- ${h.habit_name} (Streak: ${h.streak_count})`).join("\n") || "No habits tracked";
+            const notesList = notes?.map(n => `- ${n.title} (${n.tags})`).join("\n") || "No notes";
+
+            const context = `
+Current Date: ${new Date().toLocaleDateString()}
+
+[ACTIVE TASKS]
+${activeTasks}
+
+[RECENT FINANCE]
+${recentExpenses}
+Total Income: ৳${expenses?.filter(e => e.type === "income").reduce((a, b) => a + b.amount, 0) || 0}
+Total Expenses: ৳${expenses?.filter(e => e.type === "expense").reduce((a, b) => a + b.amount, 0) || 0}
+
+[HABITS]
+${habitStatus}
+
+[NOTES]
+${notesList}
+`;
+
+            // Process with history and context
+            const result = await processUserMessage(userMsg, messages, context);
+
+            // Execute any detected action
+            if (!["CHAT", "UNKNOWN", "GET_SUMMARY", "ANALYZE_BUDGET"].includes(result.action)) {
+                await executeIntent(result);
+                toast.success("Action executed successfully");
+            }
+
+            setMessages(prev => [...prev, { role: "assistant", content: result.response_text }]);
+        } catch (error) {
+            setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I ran into an error processing that request." }]);
+            toast.error("Something went wrong");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <>
+            {/* Floating Trigger Button */}
+            {!isOpen && (
+                <motion.button
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-primary shadow-lg flex items-center justify-center glow-primary hover:scale-105 transition-transform"
+                    onClick={() => setIsOpen(true)}
+                >
+                    <Sparkles className="w-6 h-6 text-white" />
+                </motion.button>
+            )}
+
+            {/* Chat Window */}
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 100, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 100, scale: 0.9 }}
+                        className="fixed bottom-6 right-6 z-50 w-[90vw] md:w-[400px] h-[600px] max-h-[80vh] flex flex-col glass-card overflow-hidden shadow-2xl border border-primary/20"
+                    >
+                        {/* Header */}
+                        <div className="p-4 border-b border-border bg-background/50 backdrop-blur-md flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                                    <Bot className="w-5 h-5 text-primary" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-sm">LifeOS AI</h3>
+                                    <p className="text-[10px] text-muted-foreground">Always here to help</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setMessages([])}
+                                    className="p-2 hover:bg-secondary rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                                    title="Clear history"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => setIsOpen(false)}
+                                    className="p-2 hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Messages Area */}
+                        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {messages.length === 0 && (
+                                <div className="h-full flex flex-col items-center justify-center text-center p-6 text-muted-foreground space-y-4 opacity-50">
+                                    <Sparkles className="w-12 h-12 mb-2" />
+                                    <p>Ask me to track expenses, add tasks, or just chat!</p>
+                                    <div className="grid grid-cols-1 gap-2 text-xs w-full">
+                                        <div className="p-2 bg-secondary/50 rounded cursor-pointer hover:bg-secondary transition-colors" onClick={() => { setInput("Add expense 500 for Food"); }}>"Add expense 500 for Food"</div>
+                                        <div className="p-2 bg-secondary/50 rounded cursor-pointer hover:bg-secondary transition-colors" onClick={() => { setInput("Add task: Learn React"); }}>"Add task: Learn React"</div>
+                                    </div>
+                                </div>
+                            )}
+                            {messages.map((msg, i) => (
+                                <div
+                                    key={i}
+                                    className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+                                >
+                                    <div
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 
+                            ${msg.role === "user" ? "bg-secondary text-foreground" : "bg-primary/20 text-primary"}`}
+                                    >
+                                        {msg.role === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                                    </div>
+                                    <div
+                                        className={`p-3 rounded-2xl max-w-[80%] text-sm 
+                            ${msg.role === "user"
+                                                ? "bg-primary text-primary-foreground rounded-tr-none"
+                                                : "bg-secondary text-secondary-foreground rounded-tl-none"}`}
+                                    >
+                                        {msg.content}
+                                    </div>
+                                </div>
+                            ))}
+                            {isLoading && (
+                                <div className="flex gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                                        <Bot className="w-4 h-4 text-primary" />
+                                    </div>
+                                    <div className="p-3 rounded-2xl bg-secondary rounded-tl-none">
+                                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Input Area */}
+                        <form onSubmit={handleSend} className="p-4 bg-background/50 border-t border-border backdrop-blur-md">
+                            <div className="relative flex items-center">
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    placeholder="Type a message..."
+                                    className="w-full bg-secondary/50 border border-border rounded-full py-3 pl-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                    disabled={isLoading}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!input.trim() || isLoading}
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full bg-primary text-primary-foreground disabled:opacity-50 disabled:bg-secondary disabled:text-muted-foreground transition-all hover:scale-105 active:scale-95"
+                                >
+                                    <Send className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </>
+    );
+}

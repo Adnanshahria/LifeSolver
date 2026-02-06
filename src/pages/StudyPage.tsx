@@ -1,0 +1,225 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Plus, Book, GraduationCap, Trash2, Lightbulb } from "lucide-react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
+import { useStudy, StudyChapter } from "@/hooks/useStudy";
+import { getStudyTips } from "@/lib/groq";
+
+export default function StudyPage() {
+    const { chapters, subjects, chaptersBySubject, subjectProgress, isLoading, addChapter, updateProgress, deleteChapter } = useStudy();
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [newChapter, setNewChapter] = useState({ subject: "", chapter_name: "" });
+    const [aiTips, setAiTips] = useState<string | null>(null);
+    const [loadingTips, setLoadingTips] = useState(false);
+
+    const handleAddChapter = async () => {
+        if (!newChapter.subject.trim() || !newChapter.chapter_name.trim()) return;
+        await addChapter.mutateAsync(newChapter);
+        setNewChapter({ subject: "", chapter_name: "" });
+        setIsDialogOpen(false);
+    };
+
+    const handleProgressChange = (chapter: StudyChapter, value: number[]) => {
+        updateProgress.mutate({ id: chapter.id, progress_percentage: value[0] });
+    };
+
+    const handleGetTips = async (subject: string) => {
+        setLoadingTips(true);
+        try {
+            const tips = await getStudyTips(subject);
+            setAiTips(tips);
+        } catch {
+            setAiTips("Failed to get tips. Please try again.");
+        }
+        setLoadingTips(false);
+    };
+
+    const getStatusColor = (progress: number) => {
+        if (progress >= 100) return "text-green-400";
+        if (progress > 0) return "text-yellow-400";
+        return "text-muted-foreground";
+    };
+
+    return (
+        <AppLayout>
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold">Study Tracker</h1>
+                        <p className="text-muted-foreground">Track your learning progress by subject and chapter</p>
+                    </div>
+                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="gap-2">
+                                <Plus className="w-4 h-4" />
+                                Add Chapter
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add Study Chapter</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 pt-4">
+                                <Input
+                                    placeholder="Subject (e.g., Physics, Math)"
+                                    value={newChapter.subject}
+                                    onChange={(e) => setNewChapter({ ...newChapter, subject: e.target.value })}
+                                />
+                                <Input
+                                    placeholder="Chapter name (e.g., Chapter 5: Waves)"
+                                    value={newChapter.chapter_name}
+                                    onChange={(e) => setNewChapter({ ...newChapter, chapter_name: e.target.value })}
+                                />
+                                <Button onClick={handleAddChapter} className="w-full" disabled={addChapter.isPending}>
+                                    {addChapter.isPending ? "Adding..." : "Add Chapter"}
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+
+                {/* AI Tips Card */}
+                {aiTips && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="glass-card p-4 border-primary/50"
+                    >
+                        <div className="flex items-start gap-3">
+                            <Lightbulb className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="font-semibold mb-2">AI Study Tips</h3>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiTips}</p>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => setAiTips(null)}>×</Button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Subject Progress Overview */}
+                {subjectProgress.length > 0 && (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {subjectProgress.map((subject, index) => (
+                            <motion.div
+                                key={subject.subject}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className="glass-card p-4"
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <GraduationCap className="w-4 h-4 text-primary" />
+                                        <span className="font-medium">{subject.subject}</span>
+                                    </div>
+                                    <Badge variant="secondary">{subject.chapters} ch</Badge>
+                                </div>
+                                <Progress value={subject.progress} className="h-2 mb-1" />
+                                <p className={`text-sm ${getStatusColor(subject.progress)}`}>{subject.progress}% complete</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Chapters by Subject */}
+                <div className="space-y-4">
+                    {isLoading ? (
+                        <div className="text-center py-8 text-muted-foreground">Loading study data...</div>
+                    ) : subjects.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                            No study chapters yet. Add your first chapter!
+                        </div>
+                    ) : (
+                        <Accordion type="multiple" className="space-y-2">
+                            {subjects.map((subject) => (
+                                <AccordionItem key={subject} value={subject} className="glass-card border-none">
+                                    <AccordionTrigger className="px-4 hover:no-underline">
+                                        <div className="flex items-center gap-3">
+                                            <Book className="w-5 h-5 text-primary" />
+                                            <span className="font-semibold">{subject}</span>
+                                            <Badge variant="outline">{chaptersBySubject[subject].length} chapters</Badge>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-4 pb-4">
+                                        <div className="flex justify-end mb-3">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleGetTips(subject)}
+                                                disabled={loadingTips}
+                                                className="gap-2"
+                                            >
+                                                <Lightbulb className="w-4 h-4" />
+                                                {loadingTips ? "Loading..." : "Get AI Tips"}
+                                            </Button>
+                                        </div>
+                                        <div className="space-y-4">
+                                            {chaptersBySubject[subject].map((chapter) => (
+                                                <div key={chapter.id} className="bg-secondary/50 rounded-lg p-3">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="font-medium">{chapter.chapter_name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <Badge
+                                                                variant={chapter.status === "completed" ? "default" : "secondary"}
+                                                                className={chapter.status === "completed" ? "bg-green-500" : ""}
+                                                            >
+                                                                {chapter.status}
+                                                            </Badge>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6"
+                                                                onClick={() => deleteChapter.mutate(chapter.id)}
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <Slider
+                                                            value={[chapter.progress_percentage]}
+                                                            max={100}
+                                                            step={5}
+                                                            onValueChange={(v) => handleProgressChange(chapter, v)}
+                                                            className="flex-1"
+                                                        />
+                                                        <span className={`text-sm font-medium w-12 text-right ${getStatusColor(chapter.progress_percentage)}`}>
+                                                            {chapter.progress_percentage}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
+                    )}
+                </div>
+            </motion.div>
+        </AppLayout>
+    );
+}
