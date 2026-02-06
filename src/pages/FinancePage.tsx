@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Wallet, TrendingUp, TrendingDown, Trash2, Calendar, ChevronLeft, ChevronRight, Clock, X } from "lucide-react";
+import { Plus, Wallet, TrendingUp, TrendingDown, Trash2, ChevronLeft, ChevronRight, Clock, X, Calendar } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,12 +101,18 @@ export default function FinancePage() {
     };
 
     const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr);
-        const today = new Date().toISOString().split("T")[0];
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-        if (dateStr === today) return "Today";
-        if (dateStr === yesterday) return "Yesterday";
-        return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+        const d = new Date(dateStr + "T00:00:00");
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tomorrow = new Date(today.getTime() + 86400000);
+        const yesterday = new Date(today.getTime() - 86400000);
+
+        const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+        if (target.getTime() === today.getTime()) return "Today";
+        if (target.getTime() === yesterday.getTime()) return "Yesterday";
+        if (target.getTime() === tomorrow.getTime()) return "Tomorrow";
+        return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
     };
 
     const openHistory = (type: "all" | "income" | "expense") => {
@@ -141,13 +147,12 @@ export default function FinancePage() {
                         <Button variant="outline" size="icon" onClick={() => changeDate(-1)}>
                             <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        <div className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <div className="relative">
                             <input
                                 type="date"
                                 value={selectedDate}
                                 onChange={(e) => setSelectedDate(e.target.value)}
-                                className="bg-transparent border-none outline-none text-sm font-medium"
+                                className="px-4 py-2 bg-secondary rounded-lg border-none outline-none text-sm font-medium cursor-pointer hover:bg-secondary/80 transition-colors"
                             />
                         </div>
                         <Button variant="outline" size="icon" onClick={() => changeDate(1)}>

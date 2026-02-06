@@ -31,7 +31,7 @@ export function useFinance() {
     });
 
     const addEntry = useMutation({
-        mutationFn: async (entry: Omit<FinanceEntry, "id" | "user_id"> & { date?: string }) => {
+        mutationFn: async (entry: { type: "income" | "expense"; amount: number; category: string; description?: string; date?: string }) => {
             if (!userId) throw new Error("Not authenticated");
             const id = generateId();
             const date = entry.date ? new Date(entry.date).toISOString() : new Date().toISOString();
