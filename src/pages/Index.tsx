@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-  Wallet, 
-  ListTodo, 
-  Target, 
+import {
+  Wallet,
+  ListTodo,
+  Target,
   TrendingUp,
   CalendarDays
 } from "lucide-react";
@@ -14,30 +14,12 @@ import { HabitTracker } from "@/components/dashboard/HabitTracker";
 import { ExpenseChart } from "@/components/dashboard/ExpenseChart";
 import { AIBriefing } from "@/components/dashboard/AIBriefing";
 import { useTheme } from "@/hooks/useTheme";
+import { useFinance } from "@/hooks/useFinance";
+import { useTasks } from "@/hooks/useTasks";
+import { useHabits } from "@/hooks/useHabits";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Mock data - will be replaced with real data from Turso
-const mockTasks = [
-  { id: "1", title: "Complete React project", status: "in-progress" as const, priority: "high" as const, dueDate: "Today, 5:00 PM" },
-  { id: "2", title: "Review budget spreadsheet", status: "todo" as const, priority: "medium" as const, dueDate: "Today, 8:00 PM" },
-  { id: "3", title: "Call mom", status: "done" as const, priority: "low" as const },
-  { id: "4", title: "Prepare presentation", status: "todo" as const, priority: "high" as const, dueDate: "Today, 11:59 PM" },
-];
-
-const mockHabits = [
-  { id: "1", name: "Morning Exercise", streak: 15, completedToday: true },
-  { id: "2", name: "Read 30 minutes", streak: 8, completedToday: false },
-  { id: "3", name: "Drink 8 glasses water", streak: 22, completedToday: true },
-  { id: "4", name: "Meditation", streak: 5, completedToday: false },
-];
-
-const mockExpenses = [
-  { name: "Food", value: 4500, color: "hsl(187, 85%, 53%)" },
-  { name: "Transport", value: 2000, color: "hsl(152, 69%, 50%)" },
-  { name: "Entertainment", value: 1500, color: "hsl(38, 92%, 55%)" },
-  { name: "Bills", value: 3500, color: "hsl(280, 65%, 60%)" },
-  { name: "Shopping", value: 2500, color: "hsl(340, 75%, 55%)" },
-];
-
+// Mock data for insights - will be replaced with AI-generated
 const mockInsights = {
   summary: "You've completed 60% of today's tasks. Your spending is 15% under budget this month. Keep up the great work with your exercise habit - 15 days strong! 💪",
   tips: [
@@ -50,8 +32,24 @@ const mockInsights = {
   ],
 };
 
+// Color mapping for expense categories
+const categoryColors: Record<string, string> = {
+  "Food": "hsl(187, 85%, 53%)",
+  "Transport": "hsl(152, 69%, 50%)",
+  "Entertainment": "hsl(38, 92%, 55%)",
+  "Bills": "hsl(280, 65%, 60%)",
+  "Shopping": "hsl(340, 75%, 55%)",
+  "Health": "hsl(120, 60%, 50%)",
+  "Education": "hsl(200, 70%, 55%)",
+  "Other": "hsl(0, 0%, 60%)",
+};
+
 const Index = () => {
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const { balance, totalIncome, totalExpenses, expensesByCategory, expenses } = useFinance();
+  const { tasks } = useTasks();
+  const { habits } = useHabits();
 
   // Initialize theme on mount
   useEffect(() => {
@@ -64,6 +62,42 @@ const Index = () => {
     month: "long",
     day: "numeric",
   });
+
+  // Calculate real stats
+  const todaysTasks = tasks?.filter(t => t.status !== "done") || [];
+  const inProgressTasks = tasks?.filter(t => t.status === "in-progress") || [];
+  const activeHabits = habits?.length || 0;
+  const completedHabitsToday = habits?.filter(h => h.streak_count > 0)?.length || 0;
+
+  // Prepare expense chart data from real data
+  const expenseChartData = Object.entries(expensesByCategory || {}).map(([name, value]) => ({
+    name,
+    value,
+    color: categoryColors[name] || categoryColors["Other"],
+  }));
+
+  // Mock tasks for display (keep until TaskList is connected)
+  const displayTasks = tasks?.slice(0, 4).map(t => ({
+    id: t.id,
+    title: t.title,
+    status: t.status as "todo" | "in-progress" | "done",
+    priority: t.priority as "low" | "medium" | "high",
+    dueDate: t.due_date ? new Date(t.due_date).toLocaleString() : undefined,
+  })) || [];
+
+  // Mock habits for display
+  const displayHabits = habits?.slice(0, 4).map(h => ({
+    id: h.id,
+    name: h.habit_name,
+    streak: h.streak_count,
+    completedToday: h.streak_count > 0,
+  })) || [];
+
+  // Format balance for display
+  const formatBalance = (amount: number) => {
+    const sign = amount >= 0 ? "" : "-";
+    return `${sign}৳${Math.abs(amount).toLocaleString()}`;
+  };
 
   return (
     <AppLayout>
@@ -78,7 +112,7 @@ const Index = () => {
           <span>{today}</span>
         </div>
         <h1 className="text-3xl md:text-4xl font-bold">
-          Good afternoon, <span className="text-gradient">Adnan</span>
+          Good afternoon, <span className="text-gradient">{user?.name?.split(" ")[0] || "User"}</span>
         </h1>
         <p className="text-muted-foreground mt-1">
           Here's your daily snapshot
@@ -88,11 +122,11 @@ const Index = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
-          title="Budget Left"
-          value="৳12,500"
-          subtitle="of ৳25,000 monthly"
+          title="All-Time Balance"
+          value={formatBalance(balance)}
+          subtitle={`Income: ৳${totalIncome.toLocaleString()}`}
           icon={Wallet}
-          trend={{ value: 15, isPositive: true }}
+          trend={balance >= 0 ? { value: Math.round((balance / (totalIncome || 1)) * 100), isPositive: true } : undefined}
           color="primary"
           delay={0}
         />
@@ -127,12 +161,12 @@ const Index = () => {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left Column - Tasks & Habits */}
         <div className="lg:col-span-2 space-y-6">
-          <TaskList tasks={mockTasks} />
+          <TaskList tasks={displayTasks.length > 0 ? displayTasks : []} />
           <div className="grid md:grid-cols-2 gap-6">
-            <HabitTracker habits={mockHabits} />
+            <HabitTracker habits={displayHabits.length > 0 ? displayHabits : []} />
             <ExpenseChart
-              data={mockExpenses}
-              total={mockExpenses.reduce((acc, e) => acc + e.value, 0)}
+              data={expenseChartData.length > 0 ? expenseChartData : []}
+              total={totalExpenses}
             />
           </div>
         </div>
@@ -140,7 +174,7 @@ const Index = () => {
         {/* Right Column - AI Briefing */}
         <div className="space-y-6">
           <AIBriefing insights={mockInsights} />
-          
+
           {/* Quick Actions */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
