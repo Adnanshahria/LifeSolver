@@ -8,12 +8,14 @@ import {
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogTrigger,
     DialogFooter,
 } from "@/components/ui/dialog";
@@ -179,6 +181,7 @@ export default function InventoryPage() {
                                 <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                                     <DialogHeader>
                                         <DialogTitle>Add New Item</DialogTitle>
+                                        <DialogDescription>Add a new item to your inventory with details like category, cost, and warranty.</DialogDescription>
                                     </DialogHeader>
                                     <div className="space-y-4 pt-4">
                                         <div className="space-y-2">
@@ -228,10 +231,10 @@ export default function InventoryPage() {
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium">Purchase Date</label>
-                                                <Input
-                                                    type="date"
+                                                <DatePicker
                                                     value={newItem.purchase_date}
-                                                    onChange={(e) => setNewItem({ ...newItem, purchase_date: e.target.value })}
+                                                    onChange={(date) => setNewItem({ ...newItem, purchase_date: date })}
+                                                    placeholder="Purchase Date"
                                                 />
                                             </div>
                                         </div>
@@ -253,10 +256,10 @@ export default function InventoryPage() {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">Warranty Expiry</label>
-                                            <Input
-                                                type="date"
+                                            <DatePicker
                                                 value={newItem.warranty_expiry}
-                                                onChange={(e) => setNewItem({ ...newItem, warranty_expiry: e.target.value })}
+                                                onChange={(date) => setNewItem({ ...newItem, warranty_expiry: date })}
+                                                placeholder="Warranty Expiry"
                                             />
                                         </div>
 
@@ -480,6 +483,7 @@ export default function InventoryPage() {
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Edit Item</DialogTitle>
+                            <DialogDescription>Update the details of your inventory item.</DialogDescription>
                         </DialogHeader>
                         {editingItem && (
                             <div className="space-y-4 pt-4">
@@ -515,18 +519,18 @@ export default function InventoryPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-xs font-medium">Purchase Date</label>
-                                        <Input
-                                            type="date"
+                                        <DatePicker
                                             value={editingItem.purchase_date || ""}
-                                            onChange={(e) => setEditingItem({ ...editingItem, purchase_date: e.target.value })}
+                                            onChange={(date) => setEditingItem({ ...editingItem, purchase_date: date })}
+                                            placeholder="Purchase Date"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-medium">Warranty Expiry</label>
-                                        <Input
-                                            type="date"
+                                        <DatePicker
                                             value={editingItem.warranty_expiry || ""}
-                                            onChange={(e) => setEditingItem({ ...editingItem, warranty_expiry: e.target.value })}
+                                            onChange={(date) => setEditingItem({ ...editingItem, warranty_expiry: date })}
+                                            placeholder="Warranty Expiry"
                                         />
                                     </div>
                                 </div>
@@ -543,6 +547,7 @@ export default function InventoryPage() {
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Mark as Sold</DialogTitle>
+                            <DialogDescription>Record the sale of this item to update your finances.</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 pt-4">
                             <p className="text-sm text-muted-foreground">
@@ -559,10 +564,10 @@ export default function InventoryPage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Date Sold</label>
-                                <Input
-                                    type="date"
+                                <DatePicker
                                     value={saleData.saleDate}
-                                    onChange={(e) => setSaleData({ ...saleData, saleDate: e.target.value })}
+                                    onChange={(date) => setSaleData({ ...saleData, saleDate: date })}
+                                    placeholder="Select Date"
                                 />
                             </div>
                             <Button onClick={handleSellItem} className="w-full bg-green-600 hover:bg-green-700">

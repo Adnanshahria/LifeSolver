@@ -25,6 +25,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -589,6 +590,7 @@ export default function TasksPage() {
                             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Create New Task</DialogTitle>
+                                    <DialogDescription>Add a new task to your list. Fill in the details below.</DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4 pt-4">
                                     <Input
@@ -800,6 +802,7 @@ export default function TasksPage() {
                             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Edit Task</DialogTitle>
+                                    <DialogDescription>Modify the details of your existing task.</DialogDescription>
                                 </DialogHeader>
                                 {editingTask && (
                                     <div className="space-y-4">
