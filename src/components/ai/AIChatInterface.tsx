@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
     Send,
     Sparkles,
@@ -21,6 +21,37 @@ import { useNotes } from "@/hooks/useNotes";
 import { useHabits } from "@/hooks/useHabits";
 import { useInventory } from "@/hooks/useInventory";
 import { useStudy } from "@/hooks/useStudy";
+
+// Render inline markdown formatting: **bold**, *italic*
+function renderFormattedText(text: string): React.ReactNode {
+    const parts: React.ReactNode[] = [];
+    let remaining = text;
+    let key = 0;
+
+    while (remaining.length > 0) {
+        // Bold: **text**
+        const boldMatch = remaining.match(/^(.*?)\*\*(.+?)\*\*(.*)/s);
+        if (boldMatch) {
+            if (boldMatch[1]) parts.push(<span key={key++}>{boldMatch[1]}</span>);
+            parts.push(<strong key={key++} className="font-semibold">{boldMatch[2]}</strong>);
+            remaining = boldMatch[3];
+            continue;
+        }
+        // Italic: *text*
+        const italicMatch = remaining.match(/^(.*?)(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)(.*)/s);
+        if (italicMatch) {
+            if (italicMatch[1]) parts.push(<span key={key++}>{italicMatch[1]}</span>);
+            parts.push(<em key={key++}>{italicMatch[2]}</em>);
+            remaining = italicMatch[3];
+            continue;
+        }
+        // No more formatting
+        parts.push(<span key={key++}>{remaining}</span>);
+        break;
+    }
+
+    return parts.length === 1 ? parts[0] : <>{parts}</>;
+}
 
 export function AIChatInterface() {
     const [isOpen, setIsOpen] = useState(false);
@@ -605,12 +636,25 @@ ${items?.map(i => `- ${i.item_name} (x${i.quantity}) [${i.category || 'uncategor
                                                 {msg.role === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                                             </div>
                                             <div
-                                                className={`p-3 rounded-2xl max-w-[80%] text-sm 
+                                                className={`p-3 rounded-2xl max-w-[85%] text-sm 
                             ${msg.role === "user"
                                                         ? "bg-primary text-primary-foreground rounded-tr-none"
                                                         : "bg-secondary text-secondary-foreground rounded-tl-none"}`}
                                             >
-                                                {msg.content}
+                                                {msg.role === "assistant" ? (
+                                                    <div className="space-y-2 leading-relaxed">
+                                                        {msg.content.split('\n').map((line, li) => {
+                                                            if (!line.trim()) return <div key={li} className="h-1" />;
+                                                            return (
+                                                                <p key={li} className="">
+                                                                    {renderFormattedText(line)}
+                                                                </p>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    msg.content
+                                                )}
                                             </div>
                                         </div>
                                     ))}

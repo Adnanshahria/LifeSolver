@@ -470,8 +470,8 @@ export default function TasksPage() {
                 className="space-y-6"
             >
                 {/* Header */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
+                <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3">
                         <div>
                             <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
                             <p className="text-muted-foreground hidden sm:block text-sm">Your central productivity hub</p>
@@ -536,7 +536,7 @@ export default function TasksPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <div className="flex items-center gap-2 flex-wrap">
 
                         {/* Context Filter */}
                         <Popover>
@@ -1033,7 +1033,7 @@ export default function TasksPage() {
                                         transition={{ duration: 0.2 }}
                                         className={`glass-card p-4 ${task.is_pinned ? "border-primary/50 bg-primary/5" : ""}`}
                                     >
-                                        <div className="flex items-start gap-4">
+                                        <div className="flex items-start gap-3">
                                             {/* Status Button */}
                                             <button
                                                 onClick={() => {
@@ -1113,7 +1113,7 @@ export default function TasksPage() {
                                             </Badge>
 
                                             {/* Actions */}
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-0.5 shrink-0">
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"

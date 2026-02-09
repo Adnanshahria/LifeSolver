@@ -425,7 +425,7 @@ export default function FinancePage() {
                 className="space-y-6"
             >
                 {/* Header */}
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
                     {/* Row 1: Title + View Mode Tabs */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="hidden md:block">
@@ -434,7 +434,7 @@ export default function FinancePage() {
                         </div>
 
                         {/* Default / Special Toggle */}
-                        <div className="flex items-center gap-4 mx-auto md:mx-0">
+                        <div className="flex items-center gap-3 flex-wrap">
                             <div className="flex p-1 bg-secondary rounded-lg">
                                 <button
                                     onClick={() => setFinanceViewMode("default")}
@@ -460,7 +460,7 @@ export default function FinancePage() {
                         </div>
 
                         {/* View Mode Selector */}
-                        <div className="flex flex-wrap justify-center md:justify-start gap-1 p-1 bg-secondary rounded-lg w-fit mx-auto md:mx-0">
+                        <div className="flex flex-wrap gap-1 p-1 bg-secondary rounded-lg w-fit">
                             {(["daily", "weekly", "monthly", "yearly", "custom", "all"] as const).map((mode) => (
                                 <button
                                     key={mode}
@@ -477,7 +477,7 @@ export default function FinancePage() {
                     </div>
 
                     {/* Row 2: Date Controls + Add Entry Button */}
-                    <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
                         {/* Date Controls */}
                         <div className="flex flex-wrap items-center gap-2">
                             {viewMode === "daily" && (

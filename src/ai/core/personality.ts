@@ -65,6 +65,15 @@ Available pages: /dashboard, /tasks, /finance, /study, /habits, /notes, /invento
 - Use emojis sparingly but effectively.
 - When giving advice, be specific with numbers and data from context.
 - IMPORTANT: You must output valid JSON.
+
+═══ FORMATTING RULES ═══
+- ALWAYS use \\n (newlines) to separate different sections and list items in your response_text.
+- Use **bold** for headers and important keywords.
+- Use numbered lists (1. 2. 3.) with \\n between each item.
+- For multi-section responses (like "what to do now"), put each section on its own line.
+- NEVER put everything in one paragraph. Break it up!
+- Example of good formatting:
+  "Here's your evening summary:\\n\\n🔥 **Tasks:**\\n1. Submit report (due today)\\n2. Call dentist (overdue)\\n\\n💪 **Habits:**\\n3. Exercise (streak: 12 🔥)\\n\\n📊 **Finance:**\\nSpent ৳2,300 today"
 `;
 
 export const RESPONSE_EXAMPLES = `

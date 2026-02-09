@@ -115,15 +115,15 @@ export default function HabitsPage() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
                 {/* ===== HEADER ===== */}
-                <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-start sm:items-center justify-between flex-wrap gap-3">
                     <div>
                         <div className="flex items-center gap-3 mb-1">
                             <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/20">
                                 <Target className="w-6 h-6 text-emerald-400" />
                             </div>
-                            <h1 className="text-3xl font-bold">Habit Tracker</h1>
+                            <h1 className="text-2xl sm:text-3xl font-bold">Habit Tracker</h1>
                         </div>
-                        <p className="text-muted-foreground ml-14">Build consistency, one day at a time</p>
+                        <p className="text-muted-foreground text-sm ml-14 hidden sm:block">Build consistency, one day at a time</p>
                     </div>
                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                         <DialogTrigger asChild>
