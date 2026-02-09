@@ -71,8 +71,9 @@ export interface TaskHooks {
 
 export interface NoteHooks {
     addNote: { mutateAsync: (data: unknown) => Promise<void> };
+    updateNote: { mutateAsync: (data: unknown) => Promise<void> };
     deleteNote: { mutateAsync: (id: string) => Promise<void> };
-    notes: Array<{ id: string; title: string }>;
+    notes: Array<{ id: string; title: string; content?: string; tags?: string }>;
 }
 
 export interface HabitHooks {

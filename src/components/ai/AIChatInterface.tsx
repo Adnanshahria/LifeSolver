@@ -34,7 +34,7 @@ export function AIChatInterface() {
     const { addTask, updateTask, deleteTask, completeTask, tasks } = useTasks();
     const { addEntry, deleteEntry, updateEntry, expenses } = useFinance();
     const { addBudget, updateBudget, addToSavings, deleteBudget, budgets, savingsGoals } = useBudget();
-    const { addNote, deleteNote, notes } = useNotes();
+    const { addNote, updateNote, deleteNote, notes } = useNotes();
     const { addHabit, completeHabit, deleteHabit, habits } = useHabits();
     const { addItem, deleteItem, updateItem, items } = useInventory();
     const { addChapter, updateProgress, deleteChapter, chapters } = useStudy();
@@ -96,7 +96,13 @@ export function AIChatInterface() {
         const { action, data } = intent;
 
         // Analysis/Chat actions don't need state mutation, just the response text
-        if (["CHAT", "UNKNOWN", "GET_SUMMARY", "ANALYZE_BUDGET"].includes(action)) return;
+        if (["CHAT", "UNKNOWN", "GET_SUMMARY", "ANALYZE_BUDGET", "CLARIFY"].includes(action)) return;
+
+        // Handle NAVIGATE action
+        if (action === "NAVIGATE" && data.page) {
+            window.location.href = String(data.page);
+            return;
+        }
 
         try {
             switch (action) {
@@ -213,6 +219,18 @@ export function AIChatInterface() {
                         tags: data.tags as string,
                     });
                     break;
+                case "UPDATE_NOTE": {
+                    const noteToUpdate = notes?.find(n => n.title.toLowerCase().includes((data.title as string || "").toLowerCase()));
+                    if (noteToUpdate) {
+                        await updateNote.mutateAsync({
+                            ...noteToUpdate,
+                            title: data.new_title ? String(data.new_title) : noteToUpdate.title,
+                            content: data.content ? String(data.content) : noteToUpdate.content,
+                            tags: data.tags !== undefined ? String(data.tags) : noteToUpdate.tags,
+                        });
+                    }
+                    break;
+                }
                 case "DELETE_NOTE":
                     const noteToDelete = notes?.find(n => n.title.toLowerCase().includes((data.title as string || "").toLowerCase()));
                     if (noteToDelete) await deleteNote.mutateAsync(noteToDelete.id);
@@ -389,59 +407,83 @@ export function AIChatInterface() {
             // But to be safe and avoid Hook errors if I forget the import in this block, I'll use window.location for now or add the hook.
             // Let's add the hook at the top level component.
 
-            // CONTEXT CONSTRUCTION
-            const contextData = {
-                current_page: currentLocation,
-                current_date: new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-                finance: {
-                    balance: (expenses?.filter(e => e.type === "income").reduce((a, b) => a + b.amount, 0) || 0) - (expenses?.filter(e => e.type === "expense").reduce((a, b) => a + b.amount, 0) || 0),
-                    recent_transactions: expenses?.slice(0, 15).map(e => ({ date: e.date, type: e.type, amount: e.amount, category: e.category, desc: e.description })),
-                    budgets: budgets?.filter(b => b.type === "budget").map(b => ({ name: b.name, limit: b.target_amount, period: b.period })),
-                    savings: savingsGoals?.map(s => ({ name: s.name, current: s.current_amount, target: s.target_amount })),
-                },
-                tasks: {
-                    active: tasks?.filter(t => t.status === "todo").map(t => ({ title: t.title, priority: t.priority, due: t.due_date, context: t.context_type })),
-                    completed_recently: tasks?.filter(t => t.status === "done").slice(0, 5).map(t => t.title),
-                },
-                inventory: items?.map(i => ({ name: i.item_name, qty: i.quantity, status: i.status, category: i.category, value: i.cost })),
-                habits: habits?.map(h => ({
-                    name: h.habit_name,
-                    streak: h.streak_count,
-                    completed_today: h.last_completed_date?.startsWith(new Date().toISOString().split('T')[0]) ?? false
-                })),
-                notes: notes?.map(n => ({ title: n.title, tags: n.tags })),
-                study: chapters?.map(c => ({ subject: c.subject, chapter: c.chapter_name, progress: c.progress_percentage })),
-            };
+            // TIME AWARENESS
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' });
+            const todayStr = now.toISOString().split('T')[0];
+            const timePeriod = hour < 5 ? 'Late Night' : hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : hour < 22 ? 'Evening' : 'Night';
+
+            // TASK ANALYSIS
+            const activeTasks = tasks?.filter(t => t.status === 'todo' || t.status === 'in-progress') || [];
+            const overdueTasks = activeTasks.filter(t => t.due_date && t.due_date < todayStr);
+            const todayTasks = activeTasks.filter(t => t.due_date === todayStr);
+            const urgentTasks = activeTasks.filter(t => t.priority === 'urgent' || t.priority === 'high');
+            const completedTasks = tasks?.filter(t => t.status === 'done') || [];
+
+            // HABIT ANALYSIS
+            const habitsData = habits?.map(h => ({
+                name: h.habit_name,
+                streak: h.streak_count || 0,
+                done_today: h.last_completed_date?.startsWith(todayStr) ?? false,
+            })) || [];
+            const pendingHabits = habitsData.filter(h => !h.done_today);
+            const completedHabits = habitsData.filter(h => h.done_today);
+
+            // FINANCE ANALYSIS
+            const totalIncome = expenses?.filter(e => e.type === 'income').reduce((a, b) => a + b.amount, 0) || 0;
+            const totalExpense = expenses?.filter(e => e.type === 'expense').reduce((a, b) => a + b.amount, 0) || 0;
+            const balance = totalIncome - totalExpense;
+            const todaySpending = expenses?.filter(e => e.type === 'expense' && e.date === todayStr).reduce((a, b) => a + b.amount, 0) || 0;
+
+            // NOTE ANALYSIS (include content previews + checklist stats)
+            const notesData = notes?.map(n => {
+                const content = n.content || '';
+                const totalChecks = (content.match(/\[[ xX]\]/g) || []).length;
+                const doneChecks = (content.match(/\[[xX]\]/g) || []).length;
+                return {
+                    title: n.title,
+                    tags: n.tags,
+                    preview: content.substring(0, 150),
+                    checklist: totalChecks > 0 ? `${doneChecks}/${totalChecks} done` : null,
+                };
+            }) || [];
 
             const contextString = `
-[SYSTEM CONTEXT - GOD MODE]
-Current Location: ${window.location.pathname}
-Date: ${contextData.current_date}
+[SYSTEM CONTEXT - GOD MODE - OMNISCIENT]
+⏰ Current Time: ${hour}:${String(minute).padStart(2, '0')} (${timePeriod})
+📅 Day: ${dayOfWeek}, ${now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+📍 Current Page: ${window.location.pathname}
 
-=== FINANCE ===
-Total Balance: ৳${contextData.finance.balance}
-Recent 15 Transactions:
-${contextData.finance.recent_transactions.map(t => `- ${t.date || 'N/A'}: ${t.type.toUpperCase()} ৳${t.amount} (${t.category}) "${t.desc}"`).join('\n')}
-Budgets: ${contextData.finance.budgets.map(b => `${b.name}: ৳${b.limit}/${b.period}`).join(', ')}
-Savings: ${contextData.finance.savings.map(s => `${s.name}: ৳${s.current}/৳${s.target}`).join(', ')}
+═══ TASKS (${activeTasks.length} active) ═══
+🔴 OVERDUE (${overdueTasks.length}): ${overdueTasks.map(t => `"${t.title}" (was due ${t.due_date})`).join(', ') || 'None'}
+🟡 DUE TODAY (${todayTasks.length}): ${todayTasks.map(t => `"${t.title}" [${t.priority}]`).join(', ') || 'None'}
+🔥 URGENT/HIGH: ${urgentTasks.map(t => `"${t.title}" (due ${t.due_date || 'no date'})`).join(', ') || 'None'}
+All Active:
+${activeTasks.map(t => `- [${t.priority?.toUpperCase()}] ${t.title} (Due: ${t.due_date || 'none'}) [${t.context_type || 'general'}]${t.start_time ? ` ⏰${t.start_time}-${t.end_time}` : ''}`).join('\n') || '(no active tasks)'}
+Recently Completed: ${completedTasks.slice(0, 5).map(t => t.title).join(', ') || 'None'}
 
-=== TASKS ===
-Active Tasks:
-${contextData.tasks.active.map(t => `- [${t.priority.toUpperCase()}] ${t.title} (Due: ${t.due}) [${t.context}]`).join('\n')}
-Recently Completed: ${contextData.tasks.completed_recently.join(', ')}
+═══ HABITS (${completedHabits.length}/${habitsData.length} done today) ═══
+✅ Completed: ${completedHabits.map(h => `${h.name} (streak: ${h.streak})`).join(', ') || 'None yet'}
+⏳ Pending: ${pendingHabits.map(h => `${h.name} (streak: ${h.streak}${h.streak >= 3 ? ' 🔥' : ''})`).join(', ') || 'All done!'}
 
-=== INVENTORY ===
-Items:
-${contextData.inventory.map(i => `- ${i.name} (x${i.qty}) [${i.category}] ${i.status === 'sold' ? '(SOLD)' : ''}`).join('\n')}
+═══ FINANCE ═══
+💰 Balance: ৳${balance} (Income: ৳${totalIncome}, Expenses: ৳${totalExpense})
+📊 Today's Spending: ৳${todaySpending}
+Recent 10 Transactions:
+${expenses?.slice(0, 10).map(t => `- ${t.date || 'N/A'}: ${t.type?.toUpperCase()} ৳${t.amount} (${t.category}) "${t.description}"`).join('\n') || '(no transactions)'}
+Budgets: ${budgets?.filter(b => b.type === 'budget').map(b => `${b.name}: ৳${b.target_amount}/${b.period}`).join(', ') || 'None'}
+Savings: ${savingsGoals?.map(s => `${s.name}: ৳${s.current_amount}/৳${s.target_amount}`).join(', ') || 'None'}
 
-=== HABITS ===
-${contextData.habits.map(h => `- ${h.name}: Streak ${h.streak} ${h.completed_today ? '(DONE TODAY)' : '(PENDING)'}`).join('\n')}
+═══ STUDY ═══
+${chapters?.map(s => `- ${s.subject}: ${s.chapter_name} (${s.progress_percentage || 0}%)`).join('\n') || '(no active study chapters)'}
 
-=== STUDY ===
-${contextData.study.map(s => `- ${s.subject}: ${s.chapter} (${s.progress}%)`).join('\n')}
+═══ NOTES (${notesData.length} total) ═══
+${notesData.map(n => `- "${n.title}" [${n.tags || 'no tags'}]${n.checklist ? ` ☑️${n.checklist}` : ''} → ${n.preview.replace(/\n/g, ' ').substring(0, 80)}...`).join('\n') || '(no notes)'}
 
-=== NOTES ===
-${contextData.notes.map(n => `- ${n.title} [${n.tags}]`).join('\n')}
+═══ INVENTORY ═══
+${items?.map(i => `- ${i.item_name} (x${i.quantity}) [${i.category || 'uncategorized'}] ${i.status === 'sold' ? '(SOLD)' : ''} ${i.cost ? `৳${i.cost}` : ''}`).join('\n') || '(no items)'}
 `;
 
             // Process with history and context

@@ -33,6 +33,7 @@ function buildSystemPrompt(context?: string): string {
         `HABITS: ${HABIT_ACTIONS.join(', ')}`,
         `STUDY: ${STUDY_ACTIONS.join(', ')}`,
         `INVENTORY: ${INVENTORY_ACTIONS.join(', ')}`,
+        `NAVIGATION: NAVIGATE`,
     ].join('\n');
 
     let prompt = `${NOVA_PERSONALITY}
