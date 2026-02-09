@@ -103,7 +103,7 @@ export default function TasksPage() {
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [filter, setFilter] = useState<string>("all");
     const [contextFilter, setContextFilter] = useState<string>("all");
-    const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
+    const [viewMode, setViewMode] = useState<"list" | "grid">("list");
     const [tabView, setTabView] = useState<"upcoming" | "active" | "archive">("active");
     const [sortBy, setSortBy] = useState<"priority" | "due_date" | "created" | "alphabetical" | "duration">("due_date");
     const [newTask, setNewTask] = useState<NewTaskState>(defaultNewTask);
@@ -401,7 +401,11 @@ export default function TasksPage() {
             // Tab filter
             let tabMatch = true;
             if (tabView === "upcoming") tabMatch = isUpcoming(task);
-            else if (tabView === "active") tabMatch = isActive(task) && !isOverdue(task);
+            else if (tabView === "active") {
+                // In Grid, show all active tasks including overdue.
+                // In List, exclude overdue because they are shown in a separate section.
+                tabMatch = isActive(task) && (viewMode === "grid" || !isOverdue(task));
+            }
             else if (tabView === "archive") tabMatch = task.status === "done";
 
             const statusMatch = filter === "all" || task.status === filter;
@@ -409,7 +413,7 @@ export default function TasksPage() {
             return tabMatch && statusMatch && contextMatch;
         });
         return getSortedTasks(filtered, tabView);
-    }, [tasks, filter, contextFilter, tabView, sortBy]);
+    }, [tasks, filter, contextFilter, tabView, sortBy, viewMode]);
 
     // Overdue tasks for the Active tab
     const overdueTasks = useMemo(() => {
@@ -443,27 +447,73 @@ export default function TasksPage() {
                 className="space-y-6"
             >
                 {/* Header */}
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold">Tasks</h1>
-                        <p className="text-muted-foreground">Your central productivity hub</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {/* View Mode Toggle */}
-                        <div className="flex bg-secondary rounded-lg p-1">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
+                        <div>
+                            <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
+                            <p className="text-muted-foreground hidden sm:block text-sm">Your central productivity hub</p>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex bg-secondary/50 p-1 rounded-lg shrink-0 self-start sm:self-auto">
+                            <button
+                                onClick={() => setTabView("upcoming")}
+                                className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-all ${tabView === "upcoming"
+                                    ? "bg-background shadow-sm text-primary font-medium"
+                                    : "text-muted-foreground hover:bg-background/50"
+                                    }`}
+                            >
+                                <CalendarClock className="w-4 h-4" />
+                                <span>Upcoming</span>
+                                <span className="ml-1.5 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                                    {tabCounts.upcoming}
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => setTabView("active")}
+                                className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-all ${tabView === "active"
+                                    ? "bg-background shadow-sm text-primary font-medium"
+                                    : "text-muted-foreground hover:bg-background/50"
+                                    }`}
+                            >
+                                <Zap className="w-4 h-4" />
+                                <span>Active</span>
+                                <span className="ml-1.5 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                                    {tabCounts.active}
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => setTabView("archive")}
+                                className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-all ${tabView === "archive"
+                                    ? "bg-background shadow-sm text-primary font-medium"
+                                    : "text-muted-foreground hover:bg-background/50"
+                                    }`}
+                            >
+                                <Archive className="w-4 h-4" />
+                                <span>Archive</span>
+                            </button>
+                        </div>
+
+                        {/* View Toggle - Moved here to be in the same row group */}
+                        <div className="flex bg-secondary rounded-lg p-1 shrink-0 self-start sm:self-auto">
                             <button
                                 onClick={() => setViewMode("list")}
-                                className={`p-2 rounded transition-colors ${viewMode === "list" ? "bg-background text-primary" : "text-muted-foreground"}`}
+                                className={`p-2 rounded transition-colors ${viewMode === "list" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                                title="List View"
                             >
                                 <List className="w-4 h-4" />
                             </button>
                             <button
-                                onClick={() => setViewMode("kanban")}
-                                className={`p-2 rounded transition-colors ${viewMode === "kanban" ? "bg-background text-primary" : "text-muted-foreground"}`}
+                                onClick={() => setViewMode("grid")}
+                                className={`p-2 rounded transition-colors ${viewMode === "grid" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                                title="Grid View"
                             >
                                 <LayoutGrid className="w-4 h-4" />
                             </button>
                         </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
 
                         {/* Context Filter */}
                         <Popover>
@@ -864,50 +914,9 @@ export default function TasksPage() {
                     </div>
                 </div>
 
-                {/* Tab System - Upcoming / Active / Archive */}
-                <div className="flex gap-1 p-1 bg-secondary/50 rounded-lg w-fit">
-                    <button
-                        onClick={() => setTabView("upcoming")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${tabView === "upcoming"
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "hover:bg-secondary text-muted-foreground"
-                            }`}
-                    >
-                        <CalendarClock className="w-4 h-4" />
-                        <span className="font-medium">Upcoming</span>
-                        <Badge variant={tabView === "upcoming" ? "secondary" : "outline"} className="ml-1">
-                            {tabCounts.upcoming}
-                        </Badge>
-                    </button>
-                    <button
-                        onClick={() => setTabView("active")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${tabView === "active"
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "hover:bg-secondary text-muted-foreground"
-                            }`}
-                    >
-                        <Zap className="w-4 h-4" />
-                        <span className="font-medium">Active</span>
-                        <Badge variant={tabView === "active" ? "secondary" : "outline"} className="ml-1">
-                            {tabCounts.active}
-                        </Badge>
-                    </button>
-                    <button
-                        onClick={() => setTabView("archive")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${tabView === "archive"
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "hover:bg-secondary text-muted-foreground"
-                            }`}
-                    >
-                        <Archive className="w-4 h-4" />
-                        <span className="font-medium">Archive</span>
-                        <Badge variant={tabView === "archive" ? "secondary" : "outline"} className="ml-1">
-                            {tabCounts.archive}
-                        </Badge>
-                    </button>
-                </div>
 
-                {/* Task List */}
+
+                {/* Task Content - List or Kanban */}
                 <div className="space-y-3">
                     {isLoading ? (
                         <div className="text-center py-8 text-muted-foreground">Loading tasks...</div>
@@ -915,17 +924,19 @@ export default function TasksPage() {
                         <div className="text-center py-8 text-muted-foreground">
                             No tasks found. Add your first task!
                         </div>
-                    ) : (
+                    ) : viewMode === "list" ? (
+                        // LIST VIEW
                         <AnimatePresence>
-                            {filteredTasks.map((task, index) => {
+                            {filteredTasks.map((task) => {
                                 const contextName = getContextName(task);
                                 return (
                                     <motion.div
                                         key={task.id}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: 20 }}
-                                        transition={{ delay: index * 0.03 }}
+                                        layout
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        transition={{ duration: 0.2 }}
                                         className={`glass-card p-4 ${task.is_pinned ? "border-primary/50 bg-primary/5" : ""}`}
                                     >
                                         <div className="flex items-start gap-4">
@@ -952,7 +963,6 @@ export default function TasksPage() {
                                             {/* Task Content */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-xs text-muted-foreground font-mono w-5">{index + 1}.</span>
                                                     <p className={`font-medium ${task.status === "done" ? "line-through text-muted-foreground" : ""}`}>
                                                         {task.title}
                                                     </p>
@@ -1012,7 +1022,7 @@ export default function TasksPage() {
                                             <div className="flex items-center gap-1">
                                                 <Button
                                                     variant="ghost"
-                                                    size="icon"
+                                                    size="sm"
                                                     onClick={() => handlePinToggle(task)}
                                                     className="text-muted-foreground hover:text-primary"
                                                 >
@@ -1020,7 +1030,7 @@ export default function TasksPage() {
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
-                                                    size="icon"
+                                                    size="sm"
                                                     onClick={() => handleStartEdit(task)}
                                                     className="text-muted-foreground hover:text-blue-400"
                                                 >
@@ -1028,7 +1038,15 @@ export default function TasksPage() {
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
-                                                    size="icon"
+                                                    size="sm"
+                                                    onClick={() => completeTask.mutate(task.id)}
+                                                    className="text-green-400 hover:text-green-300 hover:bg-green-500/20"
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
                                                     onClick={() => deleteTask.mutate(task.id)}
                                                     className="text-muted-foreground hover:text-destructive"
                                                 >
@@ -1040,11 +1058,114 @@ export default function TasksPage() {
                                 );
                             })}
                         </AnimatePresence>
+                    ) : (
+                        // GRID VIEW (2 Columns)
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <AnimatePresence mode="popLayout">
+                                {filteredTasks.map((task, index) => (
+                                    <motion.div
+                                        key={task.id}
+                                        layout
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                                        className={`glass-card p-4 flex flex-col justify-between group hover:border-primary/30 transition-all ${task.status === "done" ? "opacity-75 hover:opacity-100 bg-secondary/10" : ""
+                                            } ${task.is_pinned ? "border-primary/50 bg-primary/5" : ""}`}
+                                    >
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex gap-2 items-center">
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`${priorityColors[task.priority]} capitalize shadow-sm`}
+                                                >
+                                                    {task.priority}
+                                                </Badge>
+                                                {task.is_pinned && <Pin className="w-3 h-3 text-primary fill-primary/20" />}
+                                                {task.status === "done" && (
+                                                    <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200">
+                                                        Done
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7"
+                                                    onClick={() => handleStartEdit(task)}
+                                                >
+                                                    <Edit className="w-3.5 h-3.5" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                    onClick={() => deleteTask.mutate(task.id)}
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <h3 className={`font-semibold text-lg mb-1 leading-tight ${task.status === "done" ? "text-muted-foreground" : ""}`}>
+                                                {task.title}
+                                            </h3>
+                                            {task.description && (
+                                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                                    {task.description}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/40">
+                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                                {task.due_date && (
+                                                    <span className={`flex items-center gap-1.5 ${isOverdue(task) && task.status !== "done" ? "text-red-400 font-medium" : ""}`}>
+                                                        <Calendar className="w-3.5 h-3.5" />
+                                                        {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                    </span>
+                                                )}
+                                                {task.expected_cost && (
+                                                    <span className="flex items-center gap-1.5">
+                                                        <DollarSign className="w-3.5 h-3.5" />
+                                                        {task.expected_cost.toLocaleString()}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {task.status !== "done" ? (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 px-3 text-xs hover:bg-green-500/10 hover:text-green-600"
+                                                    onClick={() => completeTask.mutate(task.id)}
+                                                >
+                                                    <Check className="w-3.5 h-3.5 mr-1.5" />
+                                                    Complete
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 px-3 text-xs hover:bg-secondary"
+                                                    onClick={() => handleStatusChange(task, "todo")}
+                                                >
+                                                    <ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />
+                                                    Reopen
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
                     )}
                 </div>
 
                 {/* Overdue Tasks Section - Only show in Active tab */}
-                {tabView === "active" && overdueTasks.length > 0 && (
+                {tabView === "active" && viewMode === "list" && overdueTasks.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1081,6 +1202,14 @@ export default function TasksPage() {
                                             <Badge variant="outline" className={priorityColors[task.priority]}>
                                                 {task.priority}
                                             </Badge>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleStartEdit(task)}
+                                                className="text-muted-foreground hover:text-blue-400"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </Button>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
