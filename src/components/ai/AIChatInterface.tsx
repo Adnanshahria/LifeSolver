@@ -142,7 +142,7 @@ export function AIChatInterface() {
                 case "ADD_TASK":
                     // Default to today's date if not specified - use LOCAL date, not UTC
                     const now = new Date();
-                    const today = `${now.getFullYear()} -${String(now.getMonth() + 1).padStart(2, '0')} -${String(now.getDate()).padStart(2, '0')} `;
+                    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                     const hasExpectedCost = data.expected_cost && Number(data.expected_cost) > 0;
                     // If expected_cost is set, automatically set context_type to "finance"
                     const taskContextType = hasExpectedCost ? "finance" : ((data.context_type as string) || "general");
@@ -169,6 +169,7 @@ export function AIChatInterface() {
                         taskContextId = matchingSavings?.id;
                     }
 
+                    console.log("AI ADD_TASK:", { title: data.title, priority: data.priority, due_date: (data.due_date as string) || today });
                     await addTask.mutateAsync({
                         title: data.title as string,
                         priority: (data.priority as "low" | "medium" | "high" | "urgent") || "medium",
