@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+﻿import { useState, useRef, useEffect, useMemo } from "react";
 import {
     Send,
     Sparkles,
@@ -9,11 +9,13 @@ import {
     Maximize2,
     Minimize2,
     Search,
-    Trash2
+    Trash2,
+    Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { processUserMessage, ChatMessage, AIIntent, executeAction, AllHooks } from "@/ai/core";
+import { cn } from "@/lib/utils";
 import { useTasks } from "@/hooks/useTasks";
 import { useFinance } from "@/hooks/useFinance";
 import { useBudget } from "@/hooks/useBudget";
@@ -44,6 +46,31 @@ function renderFormattedText(text: string): React.ReactNode {
             if (italicMatch[1]) parts.push(<span key={key++}>{italicMatch[1]}</span>);
             parts.push(<em key={key++}>{italicMatch[2]}</em>);
             remaining = italicMatch[3];
+            continue;
+        }
+        // Checklist: - [ ] or - [x]
+        const checkMatch = remaining.match(/^(.*?)[-*]\s*\[([ xX])\]\s*(.*?)(?=\n|[-*]\s*\[|$)(.*)/s);
+        if (checkMatch) {
+            if (checkMatch[1]) parts.push(<span key={key++}>{checkMatch[1]}</span>);
+            const checked = checkMatch[2].toLowerCase() === "x";
+            parts.push(
+                <div key={key++} className="flex items-start gap-2.5 py-1 select-none">
+                    <div
+                        className={cn(
+                            "mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0",
+                            checked
+                                ? "bg-primary border-primary shadow-sm"
+                                : "border-muted-foreground/30 bg-background/50"
+                        )}
+                    >
+                        {checked && <Check className="w-2.5 h-2.5 text-primary-foreground stroke-[3]" />}
+                    </div>
+                    <span className={cn("text-sm transition-all duration-300", checked && "line-through text-muted-foreground/60 italic")}>
+                        {renderFormattedText(checkMatch[3])}
+                    </span>
+                </div>
+            );
+            remaining = checkMatch[4];
             continue;
         }
         // No more formatting
@@ -485,39 +512,39 @@ export function AIChatInterface() {
 
             const contextString = `
 [SYSTEM CONTEXT - GOD MODE - OMNISCIENT]
-⏰ Current Time: ${hour}:${String(minute).padStart(2, '0')} (${timePeriod})
-📅 Day: ${dayOfWeek}, ${now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-📍 Current Page: ${window.location.pathname}
-📝 Page Context: ${pageContext}
+â° Current Time: ${hour}:${String(minute).padStart(2, '0')} (${timePeriod})
+ðŸ“… Day: ${dayOfWeek}, ${now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+ðŸ“ Current Page: ${window.location.pathname}
+ðŸ“ Page Context: ${pageContext}
 
-═══ TASKS (${activeTasks.length} active) ═══
-🔴 OVERDUE (${overdueTasks.length}): ${overdueTasks.map(t => `"${t.title}" (was due ${t.due_date})`).join(', ') || 'None'}
-🟡 DUE TODAY (${todayTasks.length}): ${todayTasks.map(t => `"${t.title}" [${t.priority}]`).join(', ') || 'None'}
-🔥 URGENT/HIGH: ${urgentTasks.map(t => `"${t.title}" (due ${t.due_date || 'no date'})`).join(', ') || 'None'}
+â•â•â• TASKS (${activeTasks.length} active) â•â•â•
+ðŸ”´ OVERDUE (${overdueTasks.length}): ${overdueTasks.map(t => `"${t.title}" (was due ${t.due_date})`).join(', ') || 'None'}
+ðŸŸ¡ DUE TODAY (${todayTasks.length}): ${todayTasks.map(t => `"${t.title}" [${t.priority}]`).join(', ') || 'None'}
+ðŸ”¥ URGENT/HIGH: ${urgentTasks.map(t => `"${t.title}" (due ${t.due_date || 'no date'})`).join(', ') || 'None'}
 All Active:
-${activeTasks.map(t => `- [${t.priority?.toUpperCase()}] ${t.title} (Due: ${t.due_date || 'none'}) [${t.context_type || 'general'}]${t.start_time ? ` ⏰${t.start_time}-${t.end_time}` : ''}`).join('\n') || '(no active tasks)'}
+${activeTasks.map(t => `- [${t.priority?.toUpperCase()}] ${t.title} (Due: ${t.due_date || 'none'}) [${t.context_type || 'general'}]${t.start_time ? ` â°${t.start_time}-${t.end_time}` : ''}`).join('\n') || '(no active tasks)'}
 Recently Completed: ${completedTasks.slice(0, 5).map(t => t.title).join(', ') || 'None'}
 
-═══ HABITS (${completedHabits.length}/${habitsData.length} done today) ═══
-✅ Completed: ${completedHabits.map(h => `${h.name} (streak: ${h.streak})`).join(', ') || 'None yet'}
-⏳ Pending: ${pendingHabits.map(h => `${h.name} (streak: ${h.streak}${h.streak >= 3 ? ' 🔥' : ''})`).join(', ') || 'All done!'}
+â•â•â• HABITS (${completedHabits.length}/${habitsData.length} done today) â•â•â•
+âœ… Completed: ${completedHabits.map(h => `${h.name} (streak: ${h.streak})`).join(', ') || 'None yet'}
+â³ Pending: ${pendingHabits.map(h => `${h.name} (streak: ${h.streak}${h.streak >= 3 ? ' ðŸ”¥' : ''})`).join(', ') || 'All done!'}
 
-═══ FINANCE ═══
-💰 Balance: ৳${balance} (Income: ৳${totalIncome}, Expenses: ৳${totalExpense})
-📊 Today's Spending: ৳${todaySpending}
+â•â•â• FINANCE â•â•â•
+ðŸ’° Balance: à§³${balance} (Income: à§³${totalIncome}, Expenses: à§³${totalExpense})
+ðŸ“Š Today's Spending: à§³${todaySpending}
 Recent 10 Transactions:
-${expenses?.slice(0, 10).map(t => `- ${t.date || 'N/A'}: ${t.type?.toUpperCase()} ৳${t.amount} (${t.category}) "${t.description}"`).join('\n') || '(no transactions)'}
-Budgets: ${budgets?.filter(b => b.type === 'budget').map(b => `${b.name}: ৳${b.target_amount}/${b.period}`).join(', ') || 'None'}
-Savings: ${savingsGoals?.map(s => `${s.name}: ৳${s.current_amount}/৳${s.target_amount}`).join(', ') || 'None'}
+${expenses?.slice(0, 10).map(t => `- ${t.date || 'N/A'}: ${t.type?.toUpperCase()} à§³${t.amount} (${t.category}) "${t.description}"`).join('\n') || '(no transactions)'}
+Budgets: ${budgets?.filter(b => b.type === 'budget').map(b => `${b.name}: à§³${b.target_amount}/${b.period}`).join(', ') || 'None'}
+Savings: ${savingsGoals?.map(s => `${s.name}: à§³${s.current_amount}/à§³${s.target_amount}`).join(', ') || 'None'}
 
-═══ STUDY ═══
+â•â•â• STUDY â•â•â•
 ${chapters?.map(s => `- ${s.subject}: ${s.chapter_name} (${s.progress_percentage || 0}%)`).join('\n') || '(no active study chapters)'}
 
-═══ NOTES (${notesData.length} total) ═══
-${notesData.map(n => `- "${n.title}" [${n.tags || 'no tags'}]${n.checklist ? ` ☑️${n.checklist}` : ''} → ${n.preview.replace(/\n/g, ' ').substring(0, 80)}...`).join('\n') || '(no notes)'}
+â•â•â• NOTES (${notesData.length} total) â•â•â•
+${notesData.map(n => `- "${n.title}" [${n.tags || 'no tags'}]${n.checklist ? ` â˜‘ï¸${n.checklist}` : ''} â†’ ${n.preview.replace(/\n/g, ' ').substring(0, 80)}...`).join('\n') || '(no notes)'}
 
-═══ INVENTORY ═══
-${items?.map(i => `- ${i.item_name} (x${i.quantity}) [${i.category || 'uncategorized'}] ${i.status === 'sold' ? '(SOLD)' : ''} ${i.cost ? `৳${i.cost}` : ''}`).join('\n') || '(no items)'}
+â•â•â• INVENTORY â•â•â•
+${items?.map(i => `- ${i.item_name} (x${i.quantity}) [${i.category || 'uncategorized'}] ${i.status === 'sold' ? '(SOLD)' : ''} ${i.cost ? `à§³${i.cost}` : ''}`).join('\n') || '(no items)'}
 `;
 
             // Process with history and context
