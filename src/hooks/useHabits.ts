@@ -74,21 +74,81 @@ export function useHabits() {
     });
 
     const completeHabit = useMutation({
-        mutationFn: async (habit: Habit) => {
-            const today = new Date().toISOString().split("T")[0];
-            const lastCompleted = habit.last_completed_date?.split("T")[0];
-            const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+        mutationFn: async ({ habit, date }: { habit: Habit; date?: string }) => {
+            const todayStr = new Date().toISOString().split("T")[0];
+            const targetDateStr = date ? date.split("T")[0] : todayStr;
+            const targetDate = new Date(targetDateStr);
+            targetDate.setHours(0, 0, 0, 0);
+
+            const lastCompletedStr = habit.last_completed_date?.split("T")[0];
+            const lastCompletedDate = lastCompletedStr ? new Date(lastCompletedStr) : null;
+            if (lastCompletedDate) lastCompletedDate.setHours(0, 0, 0, 0);
+
+            // Calculate streak start date
+            let streakStartDate: Date | null = null;
+            if (lastCompletedDate && habit.streak_count > 0) {
+                streakStartDate = new Date(lastCompletedDate);
+                streakStartDate.setDate(streakStartDate.getDate() - habit.streak_count + 1);
+                streakStartDate.setHours(0, 0, 0, 0);
+            }
 
             let newStreak = 1;
-            if (lastCompleted === yesterday) {
-                newStreak = habit.streak_count + 1;
-            } else if (lastCompleted === today) {
-                newStreak = habit.streak_count; // Already completed today
+            let newLastCompleted = targetDateStr;
+
+            if (!lastCompletedDate) {
+                // First completion
+                newStreak = 1;
+                newLastCompleted = targetDateStr;
+            } else if (targetDate.getTime() > lastCompletedDate.getTime()) {
+                // Future completion relative to last (Forward)
+                const diffTime = targetDate.getTime() - lastCompletedDate.getTime();
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays === 1) {
+                    newStreak = habit.streak_count + 1;
+                } else {
+                    newStreak = 1; // Gap > 1 day, reset streak
+                }
+                newLastCompleted = targetDateStr;
+            } else if (targetDate.getTime() === lastCompletedDate.getTime()) {
+                // Same date - toggle off? Or just re-confirm?
+                // For now, re-confirm (idempotent). To toggle off, we need separate logic.
+                // Assuming "complete" always sets it to done.
+                newStreak = habit.streak_count;
+                newLastCompleted = lastCompletedStr!;
+            } else {
+                // Past completion relative to last (Backward)
+                // Check if it's immediately before the current streak
+                if (streakStartDate) {
+                    const diffTime = streakStartDate.getTime() - targetDate.getTime();
+                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays === 1) {
+                        // Exactly one day before current streak start
+                        newStreak = habit.streak_count + 1;
+                        newLastCompleted = lastCompletedStr!; // Last date doesn't change!
+                    } else {
+                        // Gap or already inside streak?
+                        // If inside streak, do nothing (idempotent)
+                        if (targetDate >= streakStartDate) {
+                            return; // Already done
+                        }
+                        // If gap before streak, we can't represent it with current schema
+                        // So we just ignore it or treat it as a new separate streak?
+                        // Current schema only supports ONE streak. So we ignore disjoint past completions.
+                        console.warn("Cannot mark disjoint past date with current schema", targetDateStr);
+                        return;
+                    }
+                } else {
+                    // Should not happen if lastCompletedDate exists
+                    newStreak = 1;
+                    newLastCompleted = targetDateStr;
+                }
             }
 
             await db.execute({
                 sql: "UPDATE habits SET streak_count = ?, last_completed_date = ? WHERE id = ?",
-                args: [newStreak, new Date().toISOString(), habit.id],
+                args: [newStreak, newLastCompleted, habit.id],
             });
         },
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ["habits"] }),
@@ -101,6 +161,14 @@ export function useHabits() {
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ["habits"] }),
     });
 
+    const deleteAllHabits = useMutation({
+        mutationFn: async () => {
+            if (!userId) throw new Error("Not authenticated");
+            await db.execute({ sql: "DELETE FROM habits WHERE user_id = ?", args: [userId] });
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["habits"] }),
+    });
+
     return {
         habits: habitsQuery.data ?? [],
         isLoading: habitsQuery.isLoading,
@@ -109,5 +177,6 @@ export function useHabits() {
         updateHabit,
         completeHabit,
         deleteHabit,
+        deleteAllHabits,
     };
 }

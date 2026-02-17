@@ -316,7 +316,7 @@
   /* Desktop: Static header component with Pill Design */
   @media (min-width: 768px) {
     .top-toolbar {
-      @apply static w-auto justify-end gap-3;
+      @apply static w-auto justify-start gap-3;
       transform: none;
 
       /* Navbar type design */

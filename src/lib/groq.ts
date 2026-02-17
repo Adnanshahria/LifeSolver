@@ -66,6 +66,9 @@ If the user wants to perform an action with ALL required info, return:
 For ADD_EXPENSE/ADD_INCOME, data must include: amount (number), category (string), description (optional), date (optional YYYY-MM-DD format).
 For EDIT_EXPENSE/EDIT_INCOME, data must include: id (string), and any fields to update: amount, category, description, date.
 
+For COMPLETE_HABIT, data must include: name (habit name) or id (string), and optionally date (YYYY-MM-DD) for past completion.
+For DELETE_HABIT, use name: "all" to delete all habits (e.g. if user says "delete them all" or "delete everything").
+
 Available actions:
 TASKS: ADD_TASK, UPDATE_TASK, DELETE_TASK, COMPLETE_TASK
 FINANCE: ADD_EXPENSE, ADD_INCOME, DELETE_EXPENSE, EDIT_EXPENSE, EDIT_INCOME (requires type AND category for new entries)
@@ -134,7 +137,7 @@ export async function processUserMessage(
                 Authorization: `Bearer ${GROQ_API_KEY}`,
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
+                model: "llama-3.1-8b-instant",
                 messages,
                 temperature: 0.3,
                 max_tokens: 512,

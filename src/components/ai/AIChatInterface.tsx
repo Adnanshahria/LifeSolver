@@ -94,7 +94,7 @@ export function AIChatInterface() {
     const { addEntry, deleteEntry, updateEntry, expenses } = useFinance();
     const { addBudget, updateBudget, addToSavings, deleteBudget, budgets, savingsGoals } = useBudget();
     const { addNote, updateNote, deleteNote, togglePin, updateColor, archiveNote, trashNote, notes } = useNotes();
-    const { addHabit, completeHabit, deleteHabit, habits } = useHabits();
+    const { addHabit, completeHabit, deleteHabit, deleteAllHabits, habits } = useHabits();
     const { addItem, deleteItem, updateItem, items } = useInventory();
     const { addChapter, updateProgress, deleteChapter, chapters } = useStudy();
 
@@ -264,11 +264,17 @@ export function AIChatInterface() {
                     break;
                 case "COMPLETE_HABIT":
                     const habitToComplete = habits?.find(h => h.habit_name.toLowerCase().includes((data.habit_name as string || "").toLowerCase()));
-                    if (habitToComplete) await completeHabit.mutateAsync(habitToComplete);
+                    if (habitToComplete) await completeHabit.mutateAsync({ habit: habitToComplete });
                     break;
                 case "DELETE_HABIT":
-                    const habitToDelete = habits?.find(h => h.habit_name.toLowerCase().includes((data.habit_name as string || "").toLowerCase()));
-                    if (habitToDelete) await deleteHabit.mutateAsync(habitToDelete.id);
+                    const habitName = (data.habit_name as string || "").toLowerCase();
+                    if (habitName === "all" || habitName === "every habit") {
+                        // Delete all habits using the bulk mutation
+                        await deleteAllHabits.mutateAsync();
+                    } else {
+                        const habitToDelete = habits?.find(h => h.habit_name.toLowerCase().includes(habitName));
+                        if (habitToDelete) await deleteHabit.mutateAsync(habitToDelete.id);
+                    }
                     break;
 
                 // NOTES

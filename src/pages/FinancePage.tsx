@@ -440,7 +440,7 @@ export default function FinancePage() {
                     </div>
 
                     {/* Single-row controls - Left aligned on desktop for Finance Page */}
-                    <div className="top-toolbar md:justify-start">
+                    <div className="top-toolbar">
 
                         {/* Default / Special dropdown */}
                         <Select value={financeViewMode} onValueChange={(v) => setFinanceViewMode(v as typeof financeViewMode)}>
@@ -1449,434 +1449,434 @@ export default function FinancePage() {
                     </motion.div>
                 </div>
             </motion.div>
-        {/* History Modal - Mobile Responsive */ }
-        <AnimatePresence>
-    {
-        isHistoryOpen && (
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
-                onClick={() => setIsHistoryOpen(false)}
-            >
-                <motion.div
-                    initial={{ y: "100%", opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: "100%", opacity: 0 }}
-                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="bg-background rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-2xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden sm:m-4"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {/* Handle bar for mobile */}
-                    <div className="sm:hidden flex justify-center pt-2">
-                        <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-                    </div>
-                    <div className="p-4 border-b flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-primary" />
-                            <h2 className="text-xl font-bold">
-                                {historyType === "all" ? "All Transactions" : historyType === "income" ? "Income History" : "Expense History"}
-                            </h2>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => generatePDF(
-                                    historyType === "all" ? "All Transactions" : historyType === "income" ? "Income History" : "Expense History",
-                                    historyEntries,
-                                    "finance"
-                                )}
-                                className="gap-2"
+            {/* History Modal - Mobile Responsive */}
+            <AnimatePresence>
+                {
+                    isHistoryOpen && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+                            onClick={() => setIsHistoryOpen(false)}
+                        >
+                            <motion.div
+                                initial={{ y: "100%", opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: "100%", opacity: 0 }}
+                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                                className="bg-background rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-2xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden sm:m-4"
+                                onClick={(e) => e.stopPropagation()}
                             >
-                                <Download className="w-4 h-4" />
-                                <span className="hidden sm:inline">PDF</span>
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => setIsHistoryOpen(false)}>
-                                <X className="w-4 h-4" />
-                            </Button>
+                                {/* Handle bar for mobile */}
+                                <div className="sm:hidden flex justify-center pt-2">
+                                    <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+                                </div>
+                                <div className="p-4 border-b flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="w-5 h-5 text-primary" />
+                                        <h2 className="text-xl font-bold">
+                                            {historyType === "all" ? "All Transactions" : historyType === "income" ? "Income History" : "Expense History"}
+                                        </h2>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => generatePDF(
+                                                historyType === "all" ? "All Transactions" : historyType === "income" ? "Income History" : "Expense History",
+                                                historyEntries,
+                                                "finance"
+                                            )}
+                                            className="gap-2"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            <span className="hidden sm:inline">PDF</span>
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => setIsHistoryOpen(false)}>
+                                            <X className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="p-4 overflow-y-scroll max-h-[60vh] space-y-2">
+                                    {historyEntries.length === 0 ? (
+                                        <p className="text-center text-muted-foreground py-8">No transactions found</p>
+                                    ) : (
+                                        historyEntries.map((entry, index) => (
+                                            <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs text-muted-foreground font-mono w-5">{index + 1}.</span>
+                                                    <div className={`p-2 rounded-full ${entry.type === "income" ? "bg-green-500/20" : "bg-red-500/20"}`}>
+                                                        {entry.type === "income" ? (
+                                                            <TrendingUp className="w-4 h-4 text-green-400" />
+                                                        ) : (
+                                                            <TrendingDown className="w-4 h-4 text-red-400" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium">{entry.category}</p>
+                                                        {entry.description && (
+                                                            <p className="text-sm text-muted-foreground">{entry.description}</p>
+                                                        )}
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {(() => {
+                                                                const d = new Date(entry.date);
+                                                                return d.toLocaleDateString(undefined, {
+                                                                    weekday: "short",
+                                                                    month: "short",
+                                                                    day: "numeric",
+                                                                    year: "numeric"
+                                                                });
+                                                            })()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-lg font-bold ${entry.type === "income" ? "text-green-400" : "text-red-400"}`}>
+                                                        {entry.type === "income" ? "+" : "-"}৳{entry.amount.toLocaleString()}
+                                                    </span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        onClick={() => setEditingEntry({
+                                                            id: entry.id,
+                                                            type: entry.type,
+                                                            amount: entry.amount.toString(),
+                                                            category: entry.category,
+                                                            description: entry.description || "",
+                                                            date: getLocalDateStr(new Date(entry.date)),
+                                                        })}
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-red-400 hover:text-red-500"
+                                                        onClick={() => deleteEntry.mutate(entry.id)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )
+                }
+            </AnimatePresence >
+
+            {/* Edit Entry Dialog */}
+            < Dialog open={!!editingEntry
+            } onOpenChange={(open) => !open && setEditingEntry(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Entry</DialogTitle>
+                        <DialogDescription>
+                            Update this {editingEntry?.type} entry.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {editingEntry && (
+                        <div className="space-y-4 pt-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Amount</label>
+                                    <Input
+                                        type="number"
+                                        value={editingEntry.amount}
+                                        onChange={(e) => setEditingEntry({ ...editingEntry, amount: e.target.value })}
+                                        placeholder="Enter amount"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Category</label>
+                                    <Select
+                                        value={(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).includes(editingEntry.category) ? editingEntry.category : (editingEntry.category ? "Other" : "")}
+                                        onValueChange={(v) => {
+                                            if (v === "Other") {
+                                                setEditingEntry({ ...editingEntry, category: "" });
+                                            } else {
+                                                setEditingEntry({ ...editingEntry, category: v });
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
+                                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                            ))}
+                                            <SelectItem value="Other">Other</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {(!(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).includes(editingEntry.category) && editingEntry.category !== "") || (editingEntry.category === "") ? (
+                                        <Input
+                                            value={editingEntry.category}
+                                            onChange={(e) => setEditingEntry({ ...editingEntry, category: e.target.value })}
+                                            placeholder="Enter custom category"
+                                            className="mt-2"
+                                        />
+                                    ) : null}
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Description</label>
+                                <Input
+                                    value={editingEntry.description}
+                                    onChange={(e) => setEditingEntry({ ...editingEntry, description: e.target.value })}
+                                    placeholder="Optional description"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Date</label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-start gap-2">
+                                            <CalendarIcon className="w-4 h-4" />
+                                            {format(new Date(editingEntry.date + "T12:00:00"), "MMM d, yyyy")}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={new Date(editingEntry.date + "T12:00:00")}
+                                            onSelect={(date) => date && setEditingEntry({ ...editingEntry, date: getLocalDateStr(date) })}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-4">
+                                <Button variant="outline" onClick={() => setEditingEntry(null)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        updateEntry.mutate({
+                                            id: editingEntry.id,
+                                            amount: Number(editingEntry.amount),
+                                            category: editingEntry.category,
+                                            description: editingEntry.description,
+                                            date: editingEntry.date,
+                                        });
+                                        setEditingEntry(null);
+                                    }}
+                                >
+                                    Save Changes
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                    <div className="p-4 overflow-y-scroll max-h-[60vh] space-y-2">
-                        {historyEntries.length === 0 ? (
-                            <p className="text-center text-muted-foreground py-8">No transactions found</p>
-                        ) : (
-                            historyEntries.map((entry, index) => (
-                                <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xs text-muted-foreground font-mono w-5">{index + 1}.</span>
-                                        <div className={`p-2 rounded-full ${entry.type === "income" ? "bg-green-500/20" : "bg-red-500/20"}`}>
-                                            {entry.type === "income" ? (
-                                                <TrendingUp className="w-4 h-4 text-green-400" />
-                                            ) : (
-                                                <TrendingDown className="w-4 h-4 text-red-400" />
-                                            )}
-                                        </div>
+                    )}
+                </DialogContent>
+            </Dialog >
+
+            {/* Savings History Modal - Mobile Responsive */}
+            <AnimatePresence>
+                {
+                    isSavingsHistoryOpen && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+                            onClick={() => setIsSavingsHistoryOpen(false)}
+                        >
+                            <motion.div
+                                initial={{ y: "100%", opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: "100%", opacity: 0 }}
+                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                                className="bg-background rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-lg max-h-[85vh] sm:max-h-[80vh] overflow-hidden sm:m-4"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {/* Handle bar for mobile */}
+                                <div className="sm:hidden flex justify-center pt-2">
+                                    <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+                                </div>
+                                <div className="p-4 border-b flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <PiggyBank className="w-5 h-5 text-purple-400" />
                                         <div>
-                                            <p className="font-medium">{entry.category}</p>
-                                            {entry.description && (
-                                                <p className="text-sm text-muted-foreground">{entry.description}</p>
-                                            )}
+                                            <h2 className="text-lg font-bold">Savings History</h2>
                                             <p className="text-xs text-muted-foreground">
-                                                {(() => {
-                                                    const d = new Date(entry.date);
-                                                    return d.toLocaleDateString(undefined, {
-                                                        weekday: "short",
-                                                        month: "short",
-                                                        day: "numeric",
-                                                        year: "numeric"
-                                                    });
-                                                })()}
+                                                Total: ৳{totalSavings.toLocaleString()} across {savingsGoals.length} goal(s)
                                             </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className={`text-lg font-bold ${entry.type === "income" ? "text-green-400" : "text-red-400"}`}>
-                                            {entry.type === "income" ? "+" : "-"}৳{entry.amount.toLocaleString()}
-                                        </span>
                                         <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() => setEditingEntry({
-                                                id: entry.id,
-                                                type: entry.type,
-                                                amount: entry.amount.toString(),
-                                                category: entry.category,
-                                                description: entry.description || "",
-                                                date: getLocalDateStr(new Date(entry.date)),
-                                            })}
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => generatePDF("Savings History", savingsTransactions, "savings")}
+                                            className="gap-2"
                                         >
-                                            <Pencil className="w-4 h-4" />
+                                            <Download className="w-4 h-4" />
+                                            <span className="hidden sm:inline">PDF</span>
                                         </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-red-400 hover:text-red-500"
-                                            onClick={() => deleteEntry.mutate(entry.id)}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
+                                        <Button variant="ghost" size="icon" onClick={() => setIsSavingsHistoryOpen(false)}>
+                                            <X className="w-4 h-4" />
                                         </Button>
                                     </div>
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </motion.div>
-            </motion.div>
-        )
-    }
-            </AnimatePresence >
-
-        {/* Edit Entry Dialog */ }
-        < Dialog open = {!!editingEntry
-} onOpenChange = {(open) => !open && setEditingEntry(null)}>
-    <DialogContent>
-        <DialogHeader>
-            <DialogTitle>Edit Entry</DialogTitle>
-            <DialogDescription>
-                Update this {editingEntry?.type} entry.
-            </DialogDescription>
-        </DialogHeader>
-        {editingEntry && (
-            <div className="space-y-4 pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Amount</label>
-                        <Input
-                            type="number"
-                            value={editingEntry.amount}
-                            onChange={(e) => setEditingEntry({ ...editingEntry, amount: e.target.value })}
-                            placeholder="Enter amount"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Category</label>
-                        <Select
-                            value={(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).includes(editingEntry.category) ? editingEntry.category : (editingEntry.category ? "Other" : "")}
-                            onValueChange={(v) => {
-                                if (v === "Other") {
-                                    setEditingEntry({ ...editingEntry, category: "" });
-                                } else {
-                                    setEditingEntry({ ...editingEntry, category: v });
-                                }
-                            }}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select Category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
-                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                ))}
-                                <SelectItem value="Other">Other</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {(!(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).includes(editingEntry.category) && editingEntry.category !== "") || (editingEntry.category === "") ? (
-                            <Input
-                                value={editingEntry.category}
-                                onChange={(e) => setEditingEntry({ ...editingEntry, category: e.target.value })}
-                                placeholder="Enter custom category"
-                                className="mt-2"
-                            />
-                        ) : null}
-                    </div>
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Description</label>
-                    <Input
-                        value={editingEntry.description}
-                        onChange={(e) => setEditingEntry({ ...editingEntry, description: e.target.value })}
-                        placeholder="Optional description"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Date</label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start gap-2">
-                                <CalendarIcon className="w-4 h-4" />
-                                {format(new Date(editingEntry.date + "T12:00:00"), "MMM d, yyyy")}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                mode="single"
-                                selected={new Date(editingEntry.date + "T12:00:00")}
-                                onSelect={(date) => date && setEditingEntry({ ...editingEntry, date: getLocalDateStr(date) })}
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" onClick={() => setEditingEntry(null)}>
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={() => {
-                            updateEntry.mutate({
-                                id: editingEntry.id,
-                                amount: Number(editingEntry.amount),
-                                category: editingEntry.category,
-                                description: editingEntry.description,
-                                date: editingEntry.date,
-                            });
-                            setEditingEntry(null);
-                        }}
-                    >
-                        Save Changes
-                    </Button>
-                </div>
-            </div>
-        )}
-    </DialogContent>
-            </Dialog >
-
-    {/* Savings History Modal - Mobile Responsive */ }
-    <AnimatePresence>
-{
-    isSavingsHistoryOpen && (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
-            onClick={() => setIsSavingsHistoryOpen(false)}
-        >
-            <motion.div
-                initial={{ y: "100%", opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: "100%", opacity: 0 }}
-                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="bg-background rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-lg max-h-[85vh] sm:max-h-[80vh] overflow-hidden sm:m-4"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Handle bar for mobile */}
-                <div className="sm:hidden flex justify-center pt-2">
-                    <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-                </div>
-                <div className="p-4 border-b flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <PiggyBank className="w-5 h-5 text-purple-400" />
-                        <div>
-                            <h2 className="text-lg font-bold">Savings History</h2>
-                            <p className="text-xs text-muted-foreground">
-                                Total: ৳{totalSavings.toLocaleString()} across {savingsGoals.length} goal(s)
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => generatePDF("Savings History", savingsTransactions, "savings")}
-                            className="gap-2"
-                        >
-                            <Download className="w-4 h-4" />
-                            <span className="hidden sm:inline">PDF</span>
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setIsSavingsHistoryOpen(false)}>
-                            <X className="w-4 h-4" />
-                        </Button>
-                    </div>
-                </div>
-                <div className="p-4 overflow-y-auto max-h-[calc(85vh-80px)] sm:max-h-[calc(80vh-80px)] space-y-2">
-                    {savingsTransactions.length === 0 ? (
-                        <p className="text-center text-muted-foreground py-8">
-                            No savings transactions yet.
-                        </p>
-                    ) : (
-                        savingsTransactions.map(tx => {
-                            const savings = savingsGoals.find(s => s.id === tx.savings_id);
-                            return (
-                                <div key={tx.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-lg ${tx.type === "deposit" ? "bg-green-500/20" : "bg-red-500/20"}`}>
-                                            {tx.type === "deposit" ? (
-                                                <TrendingUp className="w-4 h-4 text-green-400" />
-                                            ) : (
-                                                <TrendingDown className="w-4 h-4 text-red-400" />
-                                            )}
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-sm">{savings?.name || "Savings"}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {format(new Date(tx.date + "T12:00:00"), "EEE, MMM d, yyyy")}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <span className={`font-semibold mr-2 ${tx.type === "deposit" ? "text-green-400" : "text-red-400"}`}>
-                                            {tx.type === "deposit" ? "+" : "-"}৳{tx.amount.toLocaleString()}
-                                        </span>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 hover:bg-secondary"
-                                            onClick={() => setEditingSavingsTransaction(tx)}
-                                        >
-                                            <Pencil className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-500/10"
-                                            onClick={() => deleteSavingsTransaction.mutate({
-                                                id: tx.id,
-                                                savingsId: tx.savings_id,
-                                                amount: tx.amount,
-                                                type: tx.type
-                                            })}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </div>
+                                <div className="p-4 overflow-y-auto max-h-[calc(85vh-80px)] sm:max-h-[calc(80vh-80px)] space-y-2">
+                                    {savingsTransactions.length === 0 ? (
+                                        <p className="text-center text-muted-foreground py-8">
+                                            No savings transactions yet.
+                                        </p>
+                                    ) : (
+                                        savingsTransactions.map(tx => {
+                                            const savings = savingsGoals.find(s => s.id === tx.savings_id);
+                                            return (
+                                                <div key={tx.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`p-2 rounded-lg ${tx.type === "deposit" ? "bg-green-500/20" : "bg-red-500/20"}`}>
+                                                            {tx.type === "deposit" ? (
+                                                                <TrendingUp className="w-4 h-4 text-green-400" />
+                                                            ) : (
+                                                                <TrendingDown className="w-4 h-4 text-red-400" />
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium text-sm">{savings?.name || "Savings"}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {format(new Date(tx.date + "T12:00:00"), "EEE, MMM d, yyyy")}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className={`font-semibold mr-2 ${tx.type === "deposit" ? "text-green-400" : "text-red-400"}`}>
+                                                            {tx.type === "deposit" ? "+" : "-"}৳{tx.amount.toLocaleString()}
+                                                        </span>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 hover:bg-secondary"
+                                                            onClick={() => setEditingSavingsTransaction(tx)}
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                                                            onClick={() => deleteSavingsTransaction.mutate({
+                                                                id: tx.id,
+                                                                savingsId: tx.savings_id,
+                                                                amount: tx.amount,
+                                                                type: tx.type
+                                                            })}
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
                                 </div>
-                            );
-                        })
-                    )}
-                </div>
-            </motion.div>
-        </motion.div>
-    )
-}
+                            </motion.div>
+                        </motion.div>
+                    )
+                }
             </AnimatePresence >
 
-    {/* Edit Savings Transaction Dialog */ }
-    < Dialog open = {!!editingSavingsTransaction} onOpenChange = {(open) => !open && setEditingSavingsTransaction(null)}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Edit Transaction</DialogTitle>
-                <DialogDescription>
-                    Update this savings transaction.
-                </DialogDescription>
-            </DialogHeader>
-            {editingSavingsTransaction && (
-                <div className="space-y-4 pt-4">
-                    <Tabs
-                        value={editingSavingsTransaction.type}
-                        onValueChange={(v) => setEditingSavingsTransaction({ ...editingSavingsTransaction, type: v as "deposit" | "withdraw" })}
-                    >
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="deposit" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">Deposit</TabsTrigger>
-                            <TabsTrigger value="withdraw" className="data-[state=active]:bg-red-500 data-[state=active]:text-white">Withdraw</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
+            {/* Edit Savings Transaction Dialog */}
+            < Dialog open={!!editingSavingsTransaction} onOpenChange={(open) => !open && setEditingSavingsTransaction(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Transaction</DialogTitle>
+                        <DialogDescription>
+                            Update this savings transaction.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {editingSavingsTransaction && (
+                        <div className="space-y-4 pt-4">
+                            <Tabs
+                                value={editingSavingsTransaction.type}
+                                onValueChange={(v) => setEditingSavingsTransaction({ ...editingSavingsTransaction, type: v as "deposit" | "withdraw" })}
+                            >
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="deposit" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">Deposit</TabsTrigger>
+                                    <TabsTrigger value="withdraw" className="data-[state=active]:bg-red-500 data-[state=active]:text-white">Withdraw</TabsTrigger>
+                                </TabsList>
+                            </Tabs>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Amount</label>
-                        <Input
-                            type="number"
-                            value={editingSavingsTransaction.amount}
-                            onChange={(e) => setEditingSavingsTransaction({ ...editingSavingsTransaction, amount: parseFloat(e.target.value) || 0 })}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Date</label>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-full justify-start gap-2">
-                                    <CalendarIcon className="w-4 h-4" />
-                                    {format(new Date(editingSavingsTransaction.date + "T12:00:00"), "MMM d, yyyy")}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={new Date(editingSavingsTransaction.date + "T12:00:00")}
-                                    onSelect={(date) => date && setEditingSavingsTransaction({ ...editingSavingsTransaction, date: getLocalDateStr(date) })}
-                                    initialFocus
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Amount</label>
+                                <Input
+                                    type="number"
+                                    value={editingSavingsTransaction.amount}
+                                    onChange={(e) => setEditingSavingsTransaction({ ...editingSavingsTransaction, amount: parseFloat(e.target.value) || 0 })}
                                 />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
+                            </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Description</label>
-                        <Input
-                            value={editingSavingsTransaction.description || ""}
-                            onChange={(e) => setEditingSavingsTransaction({ ...editingSavingsTransaction, description: e.target.value })}
-                            placeholder="Optional description"
-                        />
-                    </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Date</label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-start gap-2">
+                                            <CalendarIcon className="w-4 h-4" />
+                                            {format(new Date(editingSavingsTransaction.date + "T12:00:00"), "MMM d, yyyy")}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={new Date(editingSavingsTransaction.date + "T12:00:00")}
+                                            onSelect={(date) => date && setEditingSavingsTransaction({ ...editingSavingsTransaction, date: getLocalDateStr(date) })}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
 
-                    <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="ghost" onClick={() => setEditingSavingsTransaction(null)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                // We need the original transaction to calculate differences
-                                // But we are editing the state in place.
-                                // Wait, if I edit state in place, I lose the original values needed for `updateSavingsTransaction`.
-                                // I should have kept `editingSavingsTransaction` as the *new* state and find the *original* from the list?
-                                // Or store `originalTransaction` separately?
-                                // Actually `savingsTransactions` query data has the original.
-                                const original = savingsTransactions.find(t => t.id === editingSavingsTransaction.id);
-                                if (original) {
-                                    updateSavingsTransaction.mutate({
-                                        id: editingSavingsTransaction.id,
-                                        savingsId: editingSavingsTransaction.savings_id,
-                                        oldAmount: original.amount,
-                                        oldType: original.type,
-                                        newAmount: editingSavingsTransaction.amount,
-                                        newType: editingSavingsTransaction.type,
-                                        newDate: editingSavingsTransaction.date,
-                                        newDescription: editingSavingsTransaction.description || undefined
-                                    });
-                                    setEditingSavingsTransaction(null);
-                                }
-                            }}
-                        >
-                            Save Changes
-                        </Button>
-                    </div>
-                </div>
-            )}
-        </DialogContent>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Description</label>
+                                <Input
+                                    value={editingSavingsTransaction.description || ""}
+                                    onChange={(e) => setEditingSavingsTransaction({ ...editingSavingsTransaction, description: e.target.value })}
+                                    placeholder="Optional description"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-4">
+                                <Button variant="ghost" onClick={() => setEditingSavingsTransaction(null)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        // We need the original transaction to calculate differences
+                                        // But we are editing the state in place.
+                                        // Wait, if I edit state in place, I lose the original values needed for `updateSavingsTransaction`.
+                                        // I should have kept `editingSavingsTransaction` as the *new* state and find the *original* from the list?
+                                        // Or store `originalTransaction` separately?
+                                        // Actually `savingsTransactions` query data has the original.
+                                        const original = savingsTransactions.find(t => t.id === editingSavingsTransaction.id);
+                                        if (original) {
+                                            updateSavingsTransaction.mutate({
+                                                id: editingSavingsTransaction.id,
+                                                savingsId: editingSavingsTransaction.savings_id,
+                                                oldAmount: original.amount,
+                                                oldType: original.type,
+                                                newAmount: editingSavingsTransaction.amount,
+                                                newType: editingSavingsTransaction.type,
+                                                newDate: editingSavingsTransaction.date,
+                                                newDescription: editingSavingsTransaction.description || undefined
+                                            });
+                                            setEditingSavingsTransaction(null);
+                                        }
+                                    }}
+                                >
+                                    Save Changes
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
             </Dialog >
         </AppLayout >
     );
