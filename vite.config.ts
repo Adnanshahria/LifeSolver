@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "apple-touch-icon.png", "logo-192.png", "logo-512.png"],
+      includeAssets: ["logo.svg", "favicon.ico", "favicon-32.png", "favicon-16.png", "apple-touch-icon.png", "logo-192.png", "logo-512.png"],
       manifest: {
         name: "LifeOS - Personal Command Center",
         short_name: "LifeOS",
@@ -30,6 +30,12 @@ export default defineConfig(({ mode }) => ({
         scope: "/",
         start_url: "/",
         icons: [
+          {
+            src: "logo.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any",
+          },
           {
             src: "logo-192.png",
             sizes: "192x192",
@@ -44,7 +50,7 @@ export default defineConfig(({ mode }) => ({
             src: "logo-512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "maskable",
           },
         ],
       },
@@ -53,10 +59,14 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 10000000,
+        skipWaiting: true,       // New SW activates immediately (no waiting)
+        clientsClaim: true,      // New SW takes control of all tabs instantly
+        cleanupOutdatedCaches: true, // Remove old cache entries automatically
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         navigateFallback: "index.html", // SPA fallback for offline navigation
         navigateFallbackDenylist: [/^\/api/], // Don't fallback API routes
         runtimeCaching: [
+          // ── Google Fonts (CSS) — Cache forever ──
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: "CacheFirst",
@@ -66,11 +76,10 @@ export default defineConfig(({ mode }) => ({
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
               },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
+          // ── Google Fonts (Files) — Cache forever ──
           {
             urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
             handler: "CacheFirst",
@@ -78,25 +87,63 @@ export default defineConfig(({ mode }) => ({
               cacheName: "gstatic-fonts-cache",
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365,
               },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
+          // ── Groq AI API — Network first, cache fallback ──
           {
             urlPattern: /^https:\/\/api\.groq\.com\/.*/i,
             handler: "NetworkFirst",
             options: {
-              cacheName: "api-cache",
+              cacheName: "groq-api-cache",
               expiration: {
-                maxEntries: 50,
+                maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24, // 1 day
               },
-              cacheableResponse: {
-                statuses: [0, 200],
+              cacheableResponse: { statuses: [0, 200] },
+              networkTimeoutSeconds: 10,
+            },
+          },
+          // ── Turso Database API — Stale while revalidate ──
+          {
+            urlPattern: /^https:\/\/.*\.turso\.io\/.*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "turso-db-cache",
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
               },
+              cacheableResponse: { statuses: [0, 200] },
+              networkTimeoutSeconds: 10,
+            },
+          },
+          // ── ImgBB Uploaded Images — Cache for 1 year ──
+          {
+            urlPattern: /^https:\/\/i\.ibb\.co\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "imgbb-images-cache",
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // ── External Images (general) — Cache 30 days ──
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "external-images-cache",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
         ],

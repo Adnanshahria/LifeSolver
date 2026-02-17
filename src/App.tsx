@@ -24,14 +24,18 @@ import { initDatabase } from "./lib/turso";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Initialize dark mode by default
+  // Initialize light mode by default
   useEffect(() => {
     const stored = localStorage.getItem("lifeos-theme");
     if (!stored) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("lifeos-theme", "dark");
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("lifeos-theme", "light");
     } else {
-      document.documentElement.classList.add(stored);
+      if (stored === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
     }
 
     // Initialize database tables
@@ -44,7 +48,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner
-            theme="dark"
+            theme="system"
             toastOptions={{
               style: {
                 background: "hsl(var(--card))",
