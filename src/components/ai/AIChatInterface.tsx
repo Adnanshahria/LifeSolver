@@ -93,7 +93,7 @@ export function AIChatInterface() {
     const { addTask, updateTask, deleteTask, completeTask, tasks } = useTasks();
     const { addEntry, deleteEntry, updateEntry, expenses } = useFinance();
     const { addBudget, updateBudget, addToSavings, deleteBudget, budgets, savingsGoals } = useBudget();
-    const { addNote, updateNote, deleteNote, notes } = useNotes();
+    const { addNote, updateNote, deleteNote, togglePin, updateColor, archiveNote, trashNote, notes } = useNotes();
     const { addHabit, completeHabit, deleteHabit, habits } = useHabits();
     const { addItem, deleteItem, updateItem, items } = useInventory();
     const { addChapter, updateProgress, deleteChapter, chapters } = useStudy();
@@ -294,6 +294,22 @@ export function AIChatInterface() {
                 case "DELETE_NOTE":
                     const noteToDelete = notes?.find(n => n.title.toLowerCase().includes((data.title as string || "").toLowerCase()));
                     if (noteToDelete) await deleteNote.mutateAsync(noteToDelete.id);
+                    break;
+                case "TOGGLE_PIN_NOTE":
+                    const noteToPin = notes?.find(n => n.title.toLowerCase().includes((data.title as string || "").toLowerCase()));
+                    if (noteToPin) togglePin.mutate(noteToPin);
+                    break;
+                case "CHANGE_NOTE_COLOR":
+                    const noteToColor = notes?.find(n => n.title.toLowerCase().includes((data.title as string || "").toLowerCase()));
+                    if (noteToColor && data.color) updateColor.mutate({ id: noteToColor.id, color: String(data.color) as any });
+                    break;
+                case "ARCHIVE_NOTE":
+                    const noteToArchive = notes?.find(n => n.title.toLowerCase().includes((data.title as string || "").toLowerCase()));
+                    if (noteToArchive) archiveNote.mutate({ id: noteToArchive.id, archive: data.archive !== false && data.archive !== "false" });
+                    break;
+                case "TRASH_NOTE":
+                    const noteToTrash = notes?.find(n => n.title.toLowerCase().includes((data.title as string || "").toLowerCase()));
+                    if (noteToTrash) trashNote.mutate({ id: noteToTrash.id, trash: data.trash !== false && data.trash !== "false" });
                     break;
 
                 // INVENTORY
@@ -505,7 +521,7 @@ export function AIChatInterface() {
                 return {
                     title: n.title,
                     tags: n.tags,
-                    preview: content.substring(0, 150),
+                    preview: content.substring(0, 500),
                     checklist: totalChecks > 0 ? `${doneChecks}/${totalChecks} done` : null,
                 };
             }) || [];

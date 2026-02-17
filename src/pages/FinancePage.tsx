@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { SEO } from "@/components/seo/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Wallet, TrendingUp, TrendingDown, Trash2, ChevronLeft, ChevronRight, Clock, X, Calendar as CalendarIcon, Pencil, PiggyBank, Target, Download, Star } from "lucide-react";
+import { Plus, Wallet, TrendingUp, TrendingDown, Trash2, ChevronLeft, ChevronRight, Clock, X, Calendar as CalendarIcon, Pencil, PiggyBank, Target, Download, Star, ListFilter, PieChart as PieChartIcon, BarChart3 as BarChartIcon, History, CalendarX } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
 import { useFinance, FinanceEntry } from "@/hooks/useFinance";
 import { useBudget, SavingsTransaction } from "@/hooks/useBudget";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
@@ -37,15 +38,22 @@ const COLORS = ["#EF4444", "#F87171", "#DC2626", "#FB7185", "#E11D48", "#F43F5E"
 export default function FinancePage() {
     const { entries, regularEntries, specialEntries, isLoading, addEntry, deleteEntry, updateEntry, totalSpecialIncome, totalSpecialExpenses, specialBalance } = useFinance();
     const { budgets, savingsGoals, budgetGoals, totalSavings, budgetRemaining, primaryBudget, getBudgetRemaining, addBudget, updateBudget, addToSavings, deleteBudget, savingsTransactions, deleteSavingsTransaction, updateSavingsTransaction, specialSavingsGoals, specialBudgetGoals, totalSpecialSavings } = useBudget();
+
+    // Finance view mode: 'default' or 'special'
+    const [financeViewMode, setFinanceViewMode] = useState<"default" | "special">("default");
+    // In special view: whether to also count special entries in default budget
+    const [countInDefault, setCountInDefault] = useState(false);
+
+    // Derived goals based on view mode
+    const currentBudgetGoals = financeViewMode === "default" ? budgetGoals : specialBudgetGoals;
+    const currentSavingsGoals = financeViewMode === "default" ? savingsGoals : specialSavingsGoals;
+    const allGoals = useMemo(() => [...(currentBudgetGoals || []), ...(currentSavingsGoals || [])], [currentBudgetGoals, currentSavingsGoals]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isSavingsHistoryOpen, setIsSavingsHistoryOpen] = useState(false);
     const [historyType, setHistoryType] = useState<"all" | "income" | "expense">("all");
     const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
-    // Finance view mode: 'default' or 'special'
-    const [financeViewMode, setFinanceViewMode] = useState<"default" | "special">("default");
-    // In special view: whether to also count special entries in default budget
-    const [countInDefault, setCountInDefault] = useState(false);
+
     const [editingGoal, setEditingGoal] = useState<{ id: string; name: string; target_amount: number; type: "budget" | "savings"; period?: string } | null>(null);
     const [newBudget, setNewBudget] = useState<{
         name: string;
@@ -431,8 +439,8 @@ export default function FinancePage() {
                         <p className="text-muted-foreground text-sm">Track your income and expenses</p>
                     </div>
 
-                    {/* Single-row controls */}
-                    <div className="top-toolbar">
+                    {/* Single-row controls - Left aligned on desktop for Finance Page */}
+                    <div className="top-toolbar md:justify-start">
 
                         {/* Default / Special dropdown */}
                         <Select value={financeViewMode} onValueChange={(v) => setFinanceViewMode(v as typeof financeViewMode)}>
@@ -801,53 +809,62 @@ export default function FinancePage() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="glass-card p-3 sm:p-5 cursor-pointer hover:ring-2 hover:ring-green-400/50 transition-all"
+                        className="relative overflow-hidden rounded-2xl p-3 sm:p-5 cursor-pointer hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-500/20 via-green-400/10 to-emerald-500/5 border border-green-200/50 dark:border-green-500/20 group"
                         onClick={() => openHistory("income")}
                     >
-                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                            <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/20">
-                                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+                        <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-green-500/20 blur-2xl transition-opacity opacity-0 group-hover:opacity-100" />
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                                <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/20 text-green-600 dark:text-green-400">
+                                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </div>
+                                <span className="text-muted-foreground text-xs sm:text-sm font-medium">Income</span>
                             </div>
-                            <span className="text-muted-foreground text-xs sm:text-sm">Income</span>
+                            <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tracking-tight">৳{totalIncome.toLocaleString()}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 hidden xs:block">Click to view details</p>
                         </div>
-                        <p className="text-lg sm:text-2xl font-bold text-green-400">৳{totalIncome.toLocaleString()}</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 hidden xs:block">Click to view</p>
                     </motion.div>
 
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="glass-card p-3 sm:p-5 cursor-pointer hover:ring-2 hover:ring-red-400/50 transition-all"
+                        className="relative overflow-hidden rounded-2xl p-3 sm:p-5 cursor-pointer hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-red-500/20 via-red-400/10 to-pink-500/5 border border-red-200/50 dark:border-red-500/20 group"
                         onClick={() => openHistory("expense")}
                     >
-                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                            <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/20">
-                                <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
+                        <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-red-500/20 blur-2xl transition-opacity opacity-0 group-hover:opacity-100" />
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                                <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/20 text-red-600 dark:text-red-400">
+                                    <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </div>
+                                <span className="text-muted-foreground text-xs sm:text-sm font-medium">Expenses</span>
                             </div>
-                            <span className="text-muted-foreground text-xs sm:text-sm">Expenses</span>
+                            <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 tracking-tight">৳{totalExpenses.toLocaleString()}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 hidden xs:block">Click to view details</p>
                         </div>
-                        <p className="text-lg sm:text-2xl font-bold text-red-400">৳{totalExpenses.toLocaleString()}</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 hidden xs:block">Click to view</p>
                     </motion.div>
 
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.2 }}
-                        className="glass-card p-3 sm:p-5 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all col-span-2 sm:col-span-1"
+                        className="relative overflow-hidden rounded-2xl p-3 sm:p-5 cursor-pointer hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-500/20 via-blue-400/10 to-indigo-500/5 border border-blue-200/50 dark:border-blue-500/20 group col-span-2 sm:col-span-1"
                         onClick={() => openHistory("all")}
                     >
-                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                            <div className="p-1.5 sm:p-2 rounded-lg bg-primary/20">
-                                <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                        <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-blue-500/20 blur-2xl transition-opacity opacity-0 group-hover:opacity-100" />
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                                <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                                    <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </div>
+                                <span className="text-muted-foreground text-xs sm:text-sm font-medium">Balance</span>
                             </div>
-                            <span className="text-muted-foreground text-xs sm:text-sm">Balance</span>
+                            <p className={`text-xl sm:text-2xl font-bold tracking-tight ${balance >= 0 ? "text-blue-600 dark:text-blue-400" : "text-red-500"}`}>
+                                ৳{balance.toLocaleString()}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 hidden xs:block">Click to view all</p>
                         </div>
-                        <p className={`text-lg sm:text-2xl font-bold ${balance >= 0 ? "text-green-400" : "text-red-400"}`}>
-                            ৳{balance.toLocaleString()}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 hidden xs:block">Click to view all</p>
                     </motion.div>
                 </div>
 
@@ -855,362 +872,377 @@ export default function FinancePage() {
                 {/* Budget & Savings Section */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
                     {/* Budget Remaining Card */}
+                    {/* Budget Remaining Card */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.3 }}
-                        className="glass-card p-3 sm:p-5"
+                        className="relative overflow-hidden rounded-2xl p-3 sm:p-5 bg-gradient-to-br from-amber-500/20 via-amber-400/10 to-orange-500/5 border border-amber-200/50 dark:border-amber-500/20 group"
                     >
-                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                            <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/20">
-                                <Target className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+                        <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-amber-500/20 blur-2xl transition-opacity opacity-0 group-hover:opacity-100" />
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                                <div className="p-1.5 sm:p-2 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                                    <Target className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </div>
+                                <span className="text-muted-foreground text-xs sm:text-sm font-medium">Budget Left</span>
                             </div>
-                            <span className="text-muted-foreground text-xs sm:text-sm">Budget Left</span>
+                            <p className={`text-xl sm:text-2xl font-bold tracking-tight ${budgetRemaining >= 0 ? "text-amber-600 dark:text-amber-400" : "text-red-500"}`}>
+                                ৳{budgetRemaining.toLocaleString()}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
+                                {primaryBudget ? `${primaryBudget.name}` : "No budget"}
+                            </p>
                         </div>
-                        <p className={`text-lg sm:text-2xl font-bold ${budgetRemaining >= 0 ? "text-blue-400" : "text-red-400"}`}>
-                            ৳{budgetRemaining.toLocaleString()}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
-                            {primaryBudget ? `${primaryBudget.name}` : "No budget"}
-                        </p>
                     </motion.div>
 
+                    {/* Total Savings Card */}
                     {/* Total Savings Card */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.4 }}
-                        className="glass-card p-3 sm:p-5 cursor-pointer hover:ring-2 hover:ring-purple-400/50 transition-all"
+                        className="relative overflow-hidden rounded-2xl p-3 sm:p-5 cursor-pointer hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-500/20 via-purple-400/10 to-violet-500/5 border border-purple-200/50 dark:border-purple-500/20 group"
                         onClick={() => setIsSavingsHistoryOpen(true)}
                     >
-                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                            <div className="p-1.5 sm:p-2 rounded-lg bg-purple-500/20">
-                                <PiggyBank className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                        <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-purple-500/20 blur-2xl transition-opacity opacity-0 group-hover:opacity-100" />
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                                <div className="p-1.5 sm:p-2 rounded-lg bg-purple-500/20 text-purple-600 dark:text-purple-400">
+                                    <PiggyBank className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </div>
+                                <span className="text-muted-foreground text-xs sm:text-sm font-medium">Savings</span>
                             </div>
-                            <span className="text-muted-foreground text-xs sm:text-sm">Savings</span>
+                            <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 tracking-tight">৳{totalSavings.toLocaleString()}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 hidden xs:block">View history</p>
                         </div>
-                        <p className="text-lg sm:text-2xl font-bold text-purple-400">৳{totalSavings.toLocaleString()}</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 hidden xs:block">View history</p>
                     </motion.div>
 
                     {/* Add Budget/Savings Button */}
+                    {/* Goals Section - Now Vibrant & Consolidated */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.5 }}
-                        className="glass-card p-3 sm:p-5 col-span-2"
+                        className="relative overflow-hidden rounded-2xl p-3 sm:p-5 col-span-2 bg-gradient-to-br from-indigo-500/20 via-purple-500/15 to-violet-500/5 border border-indigo-500/20 shadow-sm"
                     >
-                        <div className="flex items-center justify-between mb-2 sm:mb-3">
-                            <div className="min-w-0">
-                                <h4 className="font-semibold text-sm sm:text-base">Goals</h4>
-                                <p className="text-[10px] sm:text-xs text-muted-foreground">{budgetGoals.length} budget, {savingsGoals.length} savings</p>
-                            </div>
-                            <Dialog open={isBudgetDialogOpen} onOpenChange={setIsBudgetDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button size="sm" className="gap-1 sm:gap-2 h-7 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm">
-                                        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                                        <span className="hidden xs:inline">Add</span> Goal
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Create Budget or Savings Goal</DialogTitle>
-                                        <DialogDescription>
-                                            Set a spending budget or savings target.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="space-y-4 pt-4">
-                                        <Tabs value={newBudget.type} onValueChange={(v) => setNewBudget({ ...newBudget, type: v as "budget" | "savings" })}>
-                                            <TabsList className="w-full">
-                                                <TabsTrigger
-                                                    value="budget"
-                                                    className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white transition-all"
-                                                >
-                                                    Budget
-                                                </TabsTrigger>
-                                                <TabsTrigger
-                                                    value="savings"
-                                                    className="flex-1 data-[state=active]:bg-purple-500 data-[state=active]:text-white transition-all"
-                                                >
-                                                    Savings
-                                                </TabsTrigger>
-                                            </TabsList>
-                                        </Tabs>
+                        <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-indigo-500/20 blur-3xl" />
 
-                                        <Input
-                                            placeholder={newBudget.type === "budget" ? "Budget Name (e.g. Monthly Budget)" : "Savings Goal Name (e.g. Emergency Fund)"}
-                                            value={newBudget.name}
-                                            onChange={(e) => setNewBudget({ ...newBudget, name: e.target.value })}
-                                        />
+                        <div className="relative z-10">
+                            {/* Header Row */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                <div>
+                                    <h4 className="font-semibold text-lg text-indigo-950 dark:text-indigo-100 tracking-tight flex items-center gap-2">
+                                        Goals
+                                        <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider">
+                                            {allGoals.length} Active
+                                        </span>
+                                    </h4>
+                                    <p className="text-xs text-indigo-600/70 dark:text-indigo-300/70 font-medium mt-0.5">
+                                        {budgetGoals.length} budget, {savingsGoals.length} savings
+                                    </p>
+                                </div>
 
-                                        <Input
-                                            type="number"
-                                            placeholder="Target Amount (৳)"
-                                            value={newBudget.target_amount}
-                                            onChange={(e) => setNewBudget({ ...newBudget, target_amount: e.target.value })}
-                                        />
+                                <div className="flex items-center gap-2">
+                                    {/* Sort Dropdown */}
+                                    <Select value={goalsSortBy} onValueChange={(v) => setGoalsSortBy(v as "date" | "amount")}>
+                                        <SelectTrigger className="h-8 w-[100px] text-xs bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 transition-all focus:ring-indigo-500/30">
+                                            <div className="flex items-center gap-1.5">
+                                                <ListFilter className="w-3.5 h-3.5" />
+                                                <span>Sort by</span>
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent align="end">
+                                            <SelectItem value="date">Date</SelectItem>
+                                            <SelectItem value="amount">Amount</SelectItem>
+                                        </SelectContent>
+                                    </Select>
 
-                                        {newBudget.type === "budget" && (
-                                            <>
-                                                <Select
-                                                    value={newBudget.period || "monthly"}
-                                                    onValueChange={(v) => setNewBudget({ ...newBudget, period: v as "monthly" | "weekly" | "yearly" })}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Period" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="weekly">Weekly</SelectItem>
-                                                        <SelectItem value="monthly">Monthly</SelectItem>
-                                                        <SelectItem value="yearly">Yearly</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-
-                                                {/* Period-based Date Selector */}
-                                                <div className="flex gap-2">
-                                                    {newBudget.period === "weekly" && (
-                                                        <Input
-                                                            type="date"
-                                                            value={`${newBudget.start_year}-${String(newBudget.start_month).padStart(2, '0')}-01`}
-                                                            onChange={(e) => {
-                                                                const d = new Date(e.target.value);
-                                                                setNewBudget({
-                                                                    ...newBudget,
-                                                                    start_month: d.getMonth() + 1,
-                                                                    start_year: d.getFullYear()
-                                                                });
-                                                            }}
-                                                            className="flex-1"
-                                                        />
-                                                    )}
-                                                    {newBudget.period === "monthly" && (
-                                                        <>
-                                                            <Select
-                                                                value={String(newBudget.start_month)}
-                                                                onValueChange={(v) => setNewBudget({ ...newBudget, start_month: parseInt(v) })}
-                                                            >
-                                                                <SelectTrigger className="flex-1">
-                                                                    <SelectValue placeholder="Month" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((m, i) => (
-                                                                        <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                            <Select
-                                                                value={String(newBudget.start_year)}
-                                                                onValueChange={(v) => setNewBudget({ ...newBudget, start_year: parseInt(v) })}
-                                                            >
-                                                                <SelectTrigger className="w-24">
-                                                                    <SelectValue placeholder="Year" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
-                                                                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </>
-                                                    )}
-                                                    {newBudget.period === "yearly" && (
-                                                        <Select
-                                                            value={String(newBudget.start_year)}
-                                                            onValueChange={(v) => setNewBudget({ ...newBudget, start_year: parseInt(v) })}
+                                    <Dialog open={isBudgetDialogOpen} onOpenChange={setIsBudgetDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button size="sm" className="h-8 gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white border-0 shadow-lg shadow-indigo-500/20">
+                                                <Plus className="w-3.5 h-3.5" />
+                                                <span className="hidden xs:inline">Add Goal</span>
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Create Budget or Savings Goal</DialogTitle>
+                                                <DialogDescription>
+                                                    Set a spending budget or savings target.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="space-y-4 pt-4">
+                                                <Tabs value={newBudget.type} onValueChange={(v) => setNewBudget({ ...newBudget, type: v as "budget" | "savings" })}>
+                                                    <TabsList className="w-full">
+                                                        <TabsTrigger
+                                                            value="budget"
+                                                            className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white transition-all"
                                                         >
-                                                            <SelectTrigger className="w-full">
-                                                                <SelectValue placeholder="Year" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
-                                                                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    )}
-                                                </div>
+                                                            Budget
+                                                        </TabsTrigger>
+                                                        <TabsTrigger
+                                                            value="savings"
+                                                            className="flex-1 data-[state=active]:bg-purple-500 data-[state=active]:text-white transition-all"
+                                                        >
+                                                            Savings
+                                                        </TabsTrigger>
+                                                    </TabsList>
+                                                </Tabs>
 
                                                 <Input
-                                                    placeholder="Category (optional, leave blank for all expenses)"
-                                                    value={newBudget.category}
-                                                    onChange={(e) => setNewBudget({ ...newBudget, category: e.target.value })}
+                                                    placeholder={newBudget.type === "budget" ? "Budget Name (e.g. Monthly Budget)" : "Savings Goal Name (e.g. Emergency Fund)"}
+                                                    value={newBudget.name}
+                                                    onChange={(e) => setNewBudget({ ...newBudget, name: e.target.value })}
                                                 />
-                                            </>
-                                        )}
 
-                                        <Button
-                                            className="w-full"
-                                            onClick={async () => {
-                                                if (!newBudget.name || !newBudget.target_amount) return;
-                                                // Build start_date from month/year for monthly/yearly budgets
-                                                const startDate = newBudget.type === "budget"
-                                                    ? `${newBudget.start_year}-${String(newBudget.start_month).padStart(2, '0')}-01`
-                                                    : null;
-                                                await addBudget.mutateAsync({
-                                                    name: newBudget.name,
-                                                    type: newBudget.type,
-                                                    target_amount: parseFloat(newBudget.target_amount),
-                                                    period: newBudget.type === "budget" ? newBudget.period : null,
-                                                    category: newBudget.category || null,
-                                                    start_date: startDate,
-                                                });
-                                                setNewBudget({
-                                                    name: "",
-                                                    type: "budget",
-                                                    target_amount: "",
-                                                    period: "monthly",
-                                                    category: "",
-                                                    start_month: new Date().getMonth() + 1,
-                                                    start_year: new Date().getFullYear(),
-                                                });
-                                                setIsBudgetDialogOpen(false);
-                                            }}
-                                            disabled={addBudget.isPending}
-                                        >
-                                            {addBudget.isPending ? "Creating..." : `Create ${newBudget.type}`}
-                                        </Button>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-                        </div>
+                                                <Input
+                                                    type="number"
+                                                    placeholder="Target Amount (৳)"
+                                                    value={newBudget.target_amount}
+                                                    onChange={(e) => setNewBudget({ ...newBudget, target_amount: e.target.value })}
+                                                />
 
-                        {/* List existing budgets/savings based on view mode */}
-                        {(() => {
-                            const currentBudgetGoals = financeViewMode === "default" ? budgetGoals : specialBudgetGoals;
-                            const currentSavingsGoals = financeViewMode === "default" ? savingsGoals : specialSavingsGoals;
-                            const allGoals = [...currentBudgetGoals, ...currentSavingsGoals];
+                                                {newBudget.type === "budget" && (
+                                                    <>
+                                                        <Select
+                                                            value={newBudget.period || "monthly"}
+                                                            onValueChange={(v) => setNewBudget({ ...newBudget, period: v as "monthly" | "weekly" | "yearly" })}
+                                                        >
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Period" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="weekly">Weekly</SelectItem>
+                                                                <SelectItem value="monthly">Monthly</SelectItem>
+                                                                <SelectItem value="yearly">Yearly</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
 
-                            if (allGoals.length === 0) return null;
-
-                            return (
-                                <div className="mt-3 space-y-2">
-                                    {/* Sorting Header */}
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                                        <span>{financeViewMode === "special" ? "⭐ " : ""}Goals ({allGoals.length})</span>
-                                        <Select value={goalsSortBy} onValueChange={(v) => setGoalsSortBy(v as "date" | "amount")}>
-                                            <SelectTrigger className="h-6 w-28 text-xs">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="date">Sort by Date</SelectItem>
-                                                <SelectItem value="amount">Sort by Amount</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="max-h-28 overflow-y-auto pr-1 space-y-2" style={{ scrollbarWidth: 'thin' }}>
-                                        {allGoals
-                                            .sort((a, b) => {
-                                                if (goalsSortBy === "amount") {
-                                                    return b.target_amount - a.target_amount;
-                                                }
-                                                // Sort by date (created_at)
-                                                return (b.created_at || "").localeCompare(a.created_at || "");
-                                            })
-                                            .map(item => {
-                                                const isBudget = item.type === "budget";
-                                                const remaining = isBudget ? getBudgetRemaining(item) : 0;
-                                                return (
-                                                    <div key={item.id} className="flex flex-col xs:flex-row xs:items-center xs:justify-between text-xs sm:text-sm p-2 bg-secondary/50 rounded-lg gap-1 xs:gap-0">
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            {isBudget ? (
-                                                                <Target className="w-3 h-3 text-blue-400 flex-shrink-0" />
-                                                            ) : (
-                                                                <PiggyBank className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                                                        {/* Period-based Date Selector */}
+                                                        <div className="flex gap-2">
+                                                            {newBudget.period === "weekly" && (
+                                                                <Input
+                                                                    type="date"
+                                                                    value={`${newBudget.start_year}-${String(newBudget.start_month).padStart(2, '0')}-01`}
+                                                                    onChange={(e) => {
+                                                                        const d = new Date(e.target.value);
+                                                                        setNewBudget({
+                                                                            ...newBudget,
+                                                                            start_month: d.getMonth() + 1,
+                                                                            start_year: d.getFullYear()
+                                                                        });
+                                                                    }}
+                                                                    className="flex-1"
+                                                                />
                                                             )}
-                                                            <span className="truncate">{item.name}</span>
-                                                            {item.is_special && <Star className="w-3 h-3 text-yellow-400 flex-shrink-0" />}
+                                                            {newBudget.period === "monthly" && (
+                                                                <>
+                                                                    <Select
+                                                                        value={String(newBudget.start_month)}
+                                                                        onValueChange={(v) => setNewBudget({ ...newBudget, start_month: parseInt(v) })}
+                                                                    >
+                                                                        <SelectTrigger className="flex-1">
+                                                                            <SelectValue placeholder="Month" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((m, i) => (
+                                                                                <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <Select
+                                                                        value={String(newBudget.start_year)}
+                                                                        onValueChange={(v) => setNewBudget({ ...newBudget, start_year: parseInt(v) })}
+                                                                    >
+                                                                        <SelectTrigger className="w-24">
+                                                                            <SelectValue placeholder="Year" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
+                                                                                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </>
+                                                            )}
+                                                            {newBudget.period === "yearly" && (
+                                                                <Select
+                                                                    value={String(newBudget.start_year)}
+                                                                    onValueChange={(v) => setNewBudget({ ...newBudget, start_year: parseInt(v) })}
+                                                                >
+                                                                    <SelectTrigger className="w-full">
+                                                                        <SelectValue placeholder="Year" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
+                                                                            <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )}
                                                         </div>
-                                                        <div className="flex items-center gap-1 justify-between xs:justify-end ml-5 xs:ml-0">
-                                                            {isBudget ? (
-                                                                <span className={`text-xs ${remaining >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                                                    ৳{remaining.toLocaleString()}<span className="text-muted-foreground">/{item.target_amount.toLocaleString()}</span>
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-xs text-purple-400">
-                                                                    ৳{item.current_amount.toLocaleString()}<span className="text-muted-foreground">/{item.target_amount.toLocaleString()}</span>
-                                                                </span>
-                                                            )}
-                                                            {/* Toggle Special Status */}
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-6 w-6"
-                                                                onClick={() => updateBudget.mutate({ id: item.id, is_special: !item.is_special })}
-                                                                title={item.is_special ? "Remove from Special" : "Mark as Special"}
-                                                            >
-                                                                <Star className={`w-3 h-3 ${item.is_special ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
-                                                            </Button>
-                                                            {!isBudget && (
-                                                                <Popover>
-                                                                    <PopoverTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                                                                            <Plus className="w-3 h-3" />
-                                                                        </Button>
-                                                                    </PopoverTrigger>
-                                                                    <PopoverContent className="w-48">
-                                                                        <div className="space-y-2">
-                                                                            <Input
-                                                                                type="number"
-                                                                                placeholder="Amount"
-                                                                                value={savingsAmount}
-                                                                                onChange={(e) => setSavingsAmount(e.target.value)}
-                                                                            />
-                                                                            <Button
-                                                                                size="sm"
-                                                                                className="w-full"
-                                                                                onClick={() => {
-                                                                                    if (savingsAmount) {
-                                                                                        addToSavings.mutate({ id: item.id, amount: parseFloat(savingsAmount) });
-                                                                                        setSavingsAmount("");
-                                                                                    }
-                                                                                }}
-                                                                            >
-                                                                                Add to Savings
-                                                                            </Button>
-                                                                        </div>
-                                                                    </PopoverContent>
-                                                                </Popover>
-                                                            )}
+
+                                                        <Input
+                                                            placeholder="Category (optional, leave blank for all expenses)"
+                                                            value={newBudget.category}
+                                                            onChange={(e) => setNewBudget({ ...newBudget, category: e.target.value })}
+                                                        />
+                                                    </>
+                                                )}
+
+                                                <Button
+                                                    className="w-full"
+                                                    onClick={async () => {
+                                                        if (!newBudget.name || !newBudget.target_amount) return;
+                                                        // Build start_date from month/year for monthly/yearly budgets
+                                                        const startDate = newBudget.type === "budget"
+                                                            ? `${newBudget.start_year}-${String(newBudget.start_month).padStart(2, '0')}-01`
+                                                            : null;
+                                                        await addBudget.mutateAsync({
+                                                            name: newBudget.name,
+                                                            type: newBudget.type,
+                                                            target_amount: parseFloat(newBudget.target_amount),
+                                                            period: newBudget.type === "budget" ? newBudget.period : null,
+                                                            category: newBudget.category || null,
+                                                            start_date: startDate,
+                                                        });
+                                                        setNewBudget({
+                                                            name: "",
+                                                            type: "budget",
+                                                            target_amount: "",
+                                                            period: "monthly",
+                                                            category: "",
+                                                            start_month: new Date().getMonth() + 1,
+                                                            start_year: new Date().getFullYear(),
+                                                        });
+                                                        setIsBudgetDialogOpen(false);
+                                                    }}
+                                                    disabled={addBudget.isPending}
+                                                >
+                                                    {addBudget.isPending ? "Creating..." : `Create ${newBudget.type}`}
+                                                </Button>
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+
+                            </div>
+
+
+                            {/* Goals List - Rendered within Card */}
+                            <div className={`grid gap-2 overflow-y-auto custom-scrollbar pr-1 mt-2.5 ${allGoals.length > 0 ? "h-[70px]" : "h-auto"}`}>
+                                {allGoals.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-4 text-center bg-indigo-500/5 rounded-lg border border-dashed border-indigo-500/20">
+                                        <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-full mb-1.5">
+                                            <Target className="w-3.5 h-3.5 text-indigo-500" />
+                                        </div>
+                                        <p className="text-xs font-medium text-indigo-900 dark:text-indigo-200">No goals</p>
+                                    </div>
+                                ) : (
+                                    allGoals
+                                        .sort((a, b) => {
+                                            if (goalsSortBy === "amount") {
+                                                return b.target_amount - a.target_amount;
+                                            }
+                                            return b.id.localeCompare(a.id);
+                                        })
+                                        .map((item) => {
+                                            const isBudget = item.type === "budget";
+                                            const spent = isBudget ? (item.target_amount - getBudgetRemaining(item as any)) : (item.current_amount || 0);
+                                            const percentage = Math.min(100, Math.max(0, (spent / item.target_amount) * 100));
+
+                                            // Dynamic color
+                                            let progressColorClass = "bg-indigo-500";
+                                            if (isBudget) {
+                                                if (percentage > 90) progressColorClass = "bg-red-500";
+                                                else if (percentage > 75) progressColorClass = "bg-amber-500";
+                                                else progressColorClass = "bg-blue-500";
+                                            } else {
+                                                if (percentage >= 100) progressColorClass = "bg-green-500";
+                                                else progressColorClass = "bg-purple-500";
+                                            }
+
+                                            return (
+                                                <div
+                                                    key={item.id}
+                                                    className="group relative flex items-center gap-3 p-2 rounded-lg bg-white/40 dark:bg-black/20 hover:bg-white/60 dark:hover:bg-black/30 border border-white/10 transition-all duration-300"
+                                                >
+                                                    <div className={`p-1.5 rounded-md flex-shrink-0 ${isBudget ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'}`}>
+                                                        {isBudget ? <Wallet className="w-3.5 h-3.5" /> : <PiggyBank className="w-3.5 h-3.5" />}
+                                                    </div>
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <h5 className="font-semibold text-xs text-indigo-950 dark:text-indigo-100 truncate">{item.name}</h5>
+                                                                {item.is_special && <Star className="w-2.5 h-2.5 text-yellow-500 fill-yellow-500" />}
+                                                            </div>
+                                                            <div className="text-[10px] font-medium text-indigo-900/60 dark:text-indigo-200/60">
+                                                                {percentage.toFixed(0)}%
+                                                            </div>
+                                                        </div>
+                                                        <div className="h-1.5 w-full bg-indigo-950/5 dark:bg-white/5 rounded-full overflow-hidden">
+                                                            <motion.div
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: `${percentage}%` }}
+                                                                transition={{ duration: 1, ease: "easeOut" }}
+                                                                className={`h-full rounded-full ${progressColorClass}`}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Compact Actions */}
+                                                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 text-indigo-900/40 hover:text-yellow-500"
+                                                            onClick={() => updateBudget.mutate({ id: item.id, is_special: !item.is_special })}
+                                                        >
+                                                            <Star className={`w-3 h-3 ${item.is_special ? "fill-yellow-500 text-yellow-500" : ""}`} />
+                                                        </Button>
+                                                        {!isBudget && (
                                                             <Popover>
                                                                 <PopoverTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                                                                        <Pencil className="w-3 h-3" />
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-indigo-900/40 hover:text-green-500">
+                                                                        <Plus className="w-3 h-3" />
                                                                     </Button>
                                                                 </PopoverTrigger>
-                                                                <PopoverContent className="w-48">
-                                                                    <div className="space-y-2">
+                                                                <PopoverContent className="w-40 p-2 bg-white/90 backdrop-blur-xl border-indigo-100 dark:border-indigo-900/50" align="end">
+                                                                    <div className="flex gap-1">
                                                                         <Input
                                                                             type="number"
-                                                                            placeholder="New target"
-                                                                            defaultValue={item.target_amount}
-                                                                            id={`edit-goal-${item.id}`}
+                                                                            placeholder="+"
+                                                                            value={savingsAmount}
+                                                                            onChange={(e) => setSavingsAmount(e.target.value)}
+                                                                            className="h-7 text-xs bg-transparent border-indigo-200 px-1"
                                                                         />
                                                                         <Button
                                                                             size="sm"
-                                                                            className="w-full"
+                                                                            className="h-7 px-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
                                                                             onClick={() => {
-                                                                                const input = document.getElementById(`edit-goal-${item.id}`) as HTMLInputElement;
-                                                                                if (input?.value) {
-                                                                                    updateBudget.mutate({ id: item.id, target_amount: parseFloat(input.value) });
+                                                                                if (savingsAmount) {
+                                                                                    addToSavings.mutate({ id: item.id, amount: parseFloat(savingsAmount) });
+                                                                                    setSavingsAmount("");
                                                                                 }
                                                                             }}
                                                                         >
-                                                                            Update Target
+                                                                            Add
                                                                         </Button>
                                                                     </div>
                                                                 </PopoverContent>
                                                             </Popover>
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteBudget.mutate(item.id)}>
-                                                                <Trash2 className="w-3 h-3" />
-                                                            </Button>
-                                                        </div>
+                                                        )}
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-indigo-900/40 hover:text-red-500" onClick={() => deleteBudget.mutate(item.id)}>
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </Button>
                                                     </div>
-                                                );
-                                            })}
-                                    </div>
-                                </div>
-                            );
-                        })()}
+                                                </div>
+                                            );
+                                        })
+                                )}</div>
+                        </div>
                     </motion.div>
                 </div>
 
@@ -1221,9 +1253,14 @@ export default function FinancePage() {
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="glass-card p-5"
+                        className="relative overflow-hidden rounded-2xl p-6 bg-white/40 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg"
                     >
-                        <h3 className="font-semibold mb-4">
+                        {/* Background gradients */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -z-10" />
+
+                        <h3 className="font-semibold mb-6 text-lg tracking-tight text-indigo-950 dark:text-white flex items-center gap-2">
+                            {viewMode === "daily" ? <PieChartIcon className="w-5 h-5 text-cyan-600" /> : <BarChartIcon className="w-5 h-5 text-blue-600" />}
                             {viewMode === "daily" ? "Transactions by Category" : "Income vs Expenses"}
                         </h3>
                         {
@@ -1251,8 +1288,12 @@ export default function FinancePage() {
                                         </ResponsiveContainer>
                                     </div>
                                 ) : (
-                                    <div className="h-64 flex items-center justify-center text-muted-foreground">
-                                        No expense data for {formatDate(selectedDate)}
+                                    <div className="h-64 flex flex-col items-center justify-center text-center">
+                                        <div className="p-4 bg-indigo-100 dark:bg-indigo-900/30 rounded-full mb-3">
+                                            <PieChartIcon className="w-8 h-8 text-indigo-400/60" />
+                                        </div>
+                                        <p className="text-sm font-medium text-muted-foreground">No data for {formatDate(selectedDate)}</p>
+                                        <p className="text-xs text-muted-foreground/60 mt-1">Add a transaction to see visual breakdown</p>
                                     </div>
                                 )
                             ) : (viewMode === "weekly" || viewMode === "monthly") ? (
@@ -1263,12 +1304,12 @@ export default function FinancePage() {
                                             data={trendData}
                                             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                                         >
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                                            <XAxis dataKey="day" stroke="#9CA3AF" fontSize={12} />
-                                            <YAxis stroke="#9CA3AF" tickFormatter={(v) => `৳${v}`} fontSize={12} />
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.2} />
+                                            <XAxis dataKey="day" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} />
+                                            <YAxis stroke="#9CA3AF" tickFormatter={(v) => `৳${v}`} fontSize={12} tickLine={false} axisLine={false} />
                                             <Tooltip
                                                 formatter={(value) => `৳${Number(value).toLocaleString()}`}
-                                                contentStyle={{ backgroundColor: "#1F2937", border: "none", borderRadius: "8px" }}
+                                                contentStyle={{ backgroundColor: "rgba(17, 24, 39, 0.8)", border: "none", borderRadius: "8px", color: "white" }}
                                             />
                                             <Legend />
                                             <Line
@@ -1276,57 +1317,57 @@ export default function FinancePage() {
                                                 dataKey="income"
                                                 name="Income"
                                                 stroke="#10B981"
-                                                strokeWidth={2}
-                                                dot={{ fill: "#10B981", strokeWidth: 2, r: 3 }}
-                                                activeDot={{ r: 5 }}
+                                                strokeWidth={3}
+                                                dot={{ fill: "#10B981", strokeWidth: 2, r: 4 }}
+                                                activeDot={{ r: 6 }}
                                             />
                                             <Line
                                                 type="monotone"
                                                 dataKey="expense"
                                                 name="Expense"
                                                 stroke="#EF4444"
-                                                strokeWidth={2}
-                                                dot={{ fill: "#EF4444", strokeWidth: 2, r: 3 }}
-                                                activeDot={{ r: 5 }}
+                                                strokeWidth={3}
+                                                dot={{ fill: "#EF4444", strokeWidth: 2, r: 4 }}
+                                                activeDot={{ r: 6 }}
                                             />
                                         </LineChart>
                                     </ResponsiveContainer>
                                 </div>
                             ) : (
                                 // Grid table for yearly/custom/all views
-                                <div className="h-64 overflow-y-auto">
+                                <div className="h-64 overflow-y-auto custom-scrollbar">
                                     <table className="w-full text-sm">
-                                        <thead className="sticky top-0 bg-background">
-                                            <tr className="border-b border-border">
-                                                <th className="text-left py-2 px-2 font-medium text-muted-foreground">Period</th>
-                                                <th className="text-right py-2 px-2 font-medium text-green-400">Income</th>
-                                                <th className="text-right py-2 px-2 font-medium text-red-400">Expense</th>
-                                                <th className="text-right py-2 px-2 font-medium text-muted-foreground">Balance</th>
+                                        <thead className="sticky top-0 bg-white/50 dark:bg-black/50 backdrop-blur-md z-10">
+                                            <tr className="border-b border-indigo-100 dark:border-indigo-900/50">
+                                                <th className="text-left py-3 px-3 font-semibold text-indigo-900 dark:text-indigo-200">Period</th>
+                                                <th className="text-right py-3 px-3 font-semibold text-green-500">Income</th>
+                                                <th className="text-right py-3 px-3 font-semibold text-red-500">Expense</th>
+                                                <th className="text-right py-3 px-3 font-semibold text-indigo-900 dark:text-indigo-200">Balance</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {trendData.map((row, i) => (
-                                                <tr key={i} className="border-b border-border/50 hover:bg-secondary/30">
-                                                    <td className="py-2 px-2 font-medium">{row.day}</td>
-                                                    <td className="text-right py-2 px-2 text-green-400">৳{row.income.toLocaleString()}</td>
-                                                    <td className="text-right py-2 px-2 text-red-400">৳{row.expense.toLocaleString()}</td>
-                                                    <td className={`text-right py-2 px-2 font-medium ${row.income - row.expense >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                                <tr key={i} className="border-b border-indigo-50 dark:border-indigo-900/20 hover:bg-white/40 dark:hover:bg-white/5 transition-colors">
+                                                    <td className="py-2.5 px-3 font-medium text-indigo-950 dark:text-indigo-100">{row.day}</td>
+                                                    <td className="text-right py-2.5 px-3 text-green-500">৳{row.income.toLocaleString()}</td>
+                                                    <td className="text-right py-2.5 px-3 text-red-500">৳{row.expense.toLocaleString()}</td>
+                                                    <td className={`text-right py-2.5 px-3 font-medium ${row.income - row.expense >= 0 ? "text-green-500" : "text-red-500"}`}>
                                                         {row.income - row.expense >= 0 ? "+" : ""}৳{(row.income - row.expense).toLocaleString()}
                                                     </td>
                                                 </tr>
                                             ))}
                                             {trendData.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={4} className="text-center py-8 text-muted-foreground">No data for this period</td>
+                                                    <td colSpan={4} className="text-center py-12 text-muted-foreground">No data for this period</td>
                                                 </tr>
                                             )}
                                         </tbody>
-                                        <tfoot className="sticky bottom-0 bg-secondary/50 font-semibold">
+                                        <tfoot className="sticky bottom-0 bg-indigo-50/80 dark:bg-indigo-900/40 backdrop-blur-md font-semibold text-sm">
                                             <tr>
-                                                <td className="py-2 px-2">Total</td>
-                                                <td className="text-right py-2 px-2 text-green-400">৳{totalIncome.toLocaleString()}</td>
-                                                <td className="text-right py-2 px-2 text-red-400">৳{totalExpenses.toLocaleString()}</td>
-                                                <td className={`text-right py-2 px-2 ${balance >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                                <td className="py-3 px-3">Total</td>
+                                                <td className="text-right py-3 px-3 text-green-600 dark:text-green-400">৳{totalIncome.toLocaleString()}</td>
+                                                <td className="text-right py-3 px-3 text-red-600 dark:text-red-400">৳{totalExpenses.toLocaleString()}</td>
+                                                <td className={`text-right py-3 px-3 ${balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                                                     {balance >= 0 ? "+" : ""}৳{balance.toLocaleString()}
                                                 </td>
                                             </tr>
@@ -1335,15 +1376,20 @@ export default function FinancePage() {
                                 </div>
                             )
                         }
-                    </motion.div >
+                    </motion.div>
 
                     {/* Recent Transactions */}
-                    < motion.div
+                    <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="glass-card p-5"
+                        className="relative overflow-hidden rounded-2xl p-6 bg-white/40 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg"
                     >
-                        <h3 className="font-semibold mb-4">
+                        {/* Background gradients */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -z-10" />
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -z-10" />
+
+                        <h3 className="font-semibold mb-6 text-lg tracking-tight text-indigo-950 dark:text-white flex items-center gap-2">
+                            <History className="w-5 h-5 text-indigo-600" />
                             {viewMode === "daily"
                                 ? `Transactions for ${formatDate(selectedDate)}`
                                 : viewMode === "all"
@@ -1351,476 +1397,486 @@ export default function FinancePage() {
                                     : `Transactions (${filteredEntries.length})`
                             }
                         </h3>
-                        <div className="space-y-3 max-h-64 overflow-y-auto">
+                        <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
                             {isLoading ? (
-                                <p className="text-muted-foreground">Loading...</p>
+                                <p className="text-muted-foreground text-center py-8">Loading...</p>
                             ) : filteredEntries.length === 0 ? (
-                                <p className="text-muted-foreground">No transactions for this date</p>
+                                <div className="h-60 flex flex-col items-center justify-center text-center">
+                                    <div className="p-4 bg-indigo-100 dark:bg-indigo-900/30 rounded-full mb-3">
+                                        <CalendarX className="w-8 h-8 text-indigo-400/60" />
+                                    </div>
+                                    <p className="text-sm font-medium text-muted-foreground">No transactions found</p>
+                                    <p className="text-xs text-muted-foreground/60 mt-1">Transactions for this period will appear here</p>
+                                </div>
                             ) : (
                                 filteredEntries.map((entry) => (
-                                    <div key={entry.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/50 gap-2">
-                                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                                            <div className={`p-1 sm:p-1.5 rounded-full flex-shrink-0 ${entry.type === "income" ? "bg-green-500/20" : "bg-red-500/20"}`}>
+                                    <div key={entry.id} className="group flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-white/5 border border-white/20 hover:bg-white/80 dark:hover:bg-white/10 transition-all duration-300 shadow-sm">
+                                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                                            <div className={`p-2 rounded-full flex-shrink-0 ${entry.type === "income" ? "bg-green-500/10" : "bg-red-500/10"}`}>
                                                 {entry.type === "income" ? (
-                                                    <TrendingUp className="w-3 h-3 text-green-400" />
+                                                    <TrendingUp className="w-4 h-4 text-green-500" />
                                                 ) : (
-                                                    <TrendingDown className="w-3 h-3 text-red-400" />
+                                                    <TrendingDown className="w-4 h-4 text-red-500" />
                                                 )}
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-xs sm:text-sm font-medium truncate">{entry.category}</p>
+                                                <p className="text-sm font-semibold text-indigo-950 dark:text-indigo-100 truncate">{entry.category}</p>
                                                 {entry.description && (
-                                                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{entry.description}</p>
+                                                    <p className="text-xs text-indigo-900/60 dark:text-indigo-300/60 truncate">{entry.description}</p>
+                                                )}
+                                                {!entry.description && (
+                                                    <p className="text-xs text-indigo-900/40 dark:text-indigo-300/40 italic">No description</p>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-1 flex-shrink-0">
-                                            <span className={`text-xs sm:text-sm font-medium ${entry.type === "income" ? "text-green-400" : "text-red-400"}`}>
-                                                {entry.type === "income" ? "+" : "-"}৳{entry.amount}
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <span className={`text-sm font-bold ${entry.type === "income" ? "text-green-500" : "text-red-500"}`}>
+                                                {entry.type === "income" ? "+" : "-"}৳{entry.amount.toLocaleString()}
                                             </span>
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-5 w-5 sm:h-6 sm:w-6"
+                                                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-900/40 hover:text-red-500 hover:bg-red-500/10"
                                                 onClick={() => deleteEntry.mutate(entry.id)}
                                             >
-                                                <Trash2 className="w-3 h-3" />
+                                                <Trash2 className="w-3.5 h-3.5" />
                                             </Button>
                                         </div>
                                     </div>
                                 ))
                             )}
                         </div>
-                    </motion.div >
-                </div >
-            </motion.div >
-
-            {/* History Modal - Mobile Responsive */}
-            <AnimatePresence>
-                {
-                    isHistoryOpen && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
-                            onClick={() => setIsHistoryOpen(false)}
-                        >
-                            <motion.div
-                                initial={{ y: "100%", opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                exit={{ y: "100%", opacity: 0 }}
-                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                                className="bg-background rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-2xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden sm:m-4"
-                                onClick={(e) => e.stopPropagation()}
+                    </motion.div>
+                </div>
+            </motion.div>
+        {/* History Modal - Mobile Responsive */ }
+        <AnimatePresence>
+    {
+        isHistoryOpen && (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+                onClick={() => setIsHistoryOpen(false)}
+            >
+                <motion.div
+                    initial={{ y: "100%", opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: "100%", opacity: 0 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                    className="bg-background rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-2xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden sm:m-4"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Handle bar for mobile */}
+                    <div className="sm:hidden flex justify-center pt-2">
+                        <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+                    </div>
+                    <div className="p-4 border-b flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-primary" />
+                            <h2 className="text-xl font-bold">
+                                {historyType === "all" ? "All Transactions" : historyType === "income" ? "Income History" : "Expense History"}
+                            </h2>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generatePDF(
+                                    historyType === "all" ? "All Transactions" : historyType === "income" ? "Income History" : "Expense History",
+                                    historyEntries,
+                                    "finance"
+                                )}
+                                className="gap-2"
                             >
-                                {/* Handle bar for mobile */}
-                                <div className="sm:hidden flex justify-center pt-2">
-                                    <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-                                </div>
-                                <div className="p-4 border-b flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Clock className="w-5 h-5 text-primary" />
-                                        <h2 className="text-xl font-bold">
-                                            {historyType === "all" ? "All Transactions" : historyType === "income" ? "Income History" : "Expense History"}
-                                        </h2>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => generatePDF(
-                                                historyType === "all" ? "All Transactions" : historyType === "income" ? "Income History" : "Expense History",
-                                                historyEntries,
-                                                "finance"
+                                <Download className="w-4 h-4" />
+                                <span className="hidden sm:inline">PDF</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setIsHistoryOpen(false)}>
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="p-4 overflow-y-scroll max-h-[60vh] space-y-2">
+                        {historyEntries.length === 0 ? (
+                            <p className="text-center text-muted-foreground py-8">No transactions found</p>
+                        ) : (
+                            historyEntries.map((entry, index) => (
+                                <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs text-muted-foreground font-mono w-5">{index + 1}.</span>
+                                        <div className={`p-2 rounded-full ${entry.type === "income" ? "bg-green-500/20" : "bg-red-500/20"}`}>
+                                            {entry.type === "income" ? (
+                                                <TrendingUp className="w-4 h-4 text-green-400" />
+                                            ) : (
+                                                <TrendingDown className="w-4 h-4 text-red-400" />
                                             )}
-                                            className="gap-2"
+                                        </div>
+                                        <div>
+                                            <p className="font-medium">{entry.category}</p>
+                                            {entry.description && (
+                                                <p className="text-sm text-muted-foreground">{entry.description}</p>
+                                            )}
+                                            <p className="text-xs text-muted-foreground">
+                                                {(() => {
+                                                    const d = new Date(entry.date);
+                                                    return d.toLocaleDateString(undefined, {
+                                                        weekday: "short",
+                                                        month: "short",
+                                                        day: "numeric",
+                                                        year: "numeric"
+                                                    });
+                                                })()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-lg font-bold ${entry.type === "income" ? "text-green-400" : "text-red-400"}`}>
+                                            {entry.type === "income" ? "+" : "-"}৳{entry.amount.toLocaleString()}
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => setEditingEntry({
+                                                id: entry.id,
+                                                type: entry.type,
+                                                amount: entry.amount.toString(),
+                                                category: entry.category,
+                                                description: entry.description || "",
+                                                date: getLocalDateStr(new Date(entry.date)),
+                                            })}
                                         >
-                                            <Download className="w-4 h-4" />
-                                            <span className="hidden sm:inline">PDF</span>
+                                            <Pencil className="w-4 h-4" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" onClick={() => setIsHistoryOpen(false)}>
-                                            <X className="w-4 h-4" />
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-red-400 hover:text-red-500"
+                                            onClick={() => deleteEntry.mutate(entry.id)}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
                                         </Button>
                                     </div>
                                 </div>
-                                <div className="p-4 overflow-y-scroll max-h-[60vh] space-y-2">
-                                    {historyEntries.length === 0 ? (
-                                        <p className="text-center text-muted-foreground py-8">No transactions found</p>
-                                    ) : (
-                                        historyEntries.map((entry, index) => (
-                                            <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-xs text-muted-foreground font-mono w-5">{index + 1}.</span>
-                                                    <div className={`p-2 rounded-full ${entry.type === "income" ? "bg-green-500/20" : "bg-red-500/20"}`}>
-                                                        {entry.type === "income" ? (
-                                                            <TrendingUp className="w-4 h-4 text-green-400" />
-                                                        ) : (
-                                                            <TrendingDown className="w-4 h-4 text-red-400" />
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium">{entry.category}</p>
-                                                        {entry.description && (
-                                                            <p className="text-sm text-muted-foreground">{entry.description}</p>
-                                                        )}
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {(() => {
-                                                                const d = new Date(entry.date);
-                                                                return d.toLocaleDateString(undefined, {
-                                                                    weekday: "short",
-                                                                    month: "short",
-                                                                    day: "numeric",
-                                                                    year: "numeric"
-                                                                });
-                                                            })()}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`text-lg font-bold ${entry.type === "income" ? "text-green-400" : "text-red-400"}`}>
-                                                        {entry.type === "income" ? "+" : "-"}৳{entry.amount.toLocaleString()}
-                                                    </span>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        onClick={() => setEditingEntry({
-                                                            id: entry.id,
-                                                            type: entry.type,
-                                                            amount: entry.amount.toString(),
-                                                            category: entry.category,
-                                                            description: entry.description || "",
-                                                            date: getLocalDateStr(new Date(entry.date)),
-                                                        })}
-                                                    >
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-red-400 hover:text-red-500"
-                                                        onClick={() => deleteEntry.mutate(entry.id)}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )
-                }
+                            ))
+                        )}
+                    </div>
+                </motion.div>
+            </motion.div>
+        )
+    }
             </AnimatePresence >
 
-            {/* Edit Entry Dialog */}
-            < Dialog open={!!editingEntry
-            } onOpenChange={(open) => !open && setEditingEntry(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Edit Entry</DialogTitle>
-                        <DialogDescription>
-                            Update this {editingEntry?.type} entry.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {editingEntry && (
-                        <div className="space-y-4 pt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Amount</label>
-                                    <Input
-                                        type="number"
-                                        value={editingEntry.amount}
-                                        onChange={(e) => setEditingEntry({ ...editingEntry, amount: e.target.value })}
-                                        placeholder="Enter amount"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Category</label>
-                                    <Select
-                                        value={(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).includes(editingEntry.category) ? editingEntry.category : (editingEntry.category ? "Other" : "")}
-                                        onValueChange={(v) => {
-                                            if (v === "Other") {
-                                                setEditingEntry({ ...editingEntry, category: "" });
-                                            } else {
-                                                setEditingEntry({ ...editingEntry, category: v });
-                                            }
-                                        }}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Category" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
-                                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                            ))}
-                                            <SelectItem value="Other">Other</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    {(!(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).includes(editingEntry.category) && editingEntry.category !== "") || (editingEntry.category === "") ? (
-                                        <Input
-                                            value={editingEntry.category}
-                                            onChange={(e) => setEditingEntry({ ...editingEntry, category: e.target.value })}
-                                            placeholder="Enter custom category"
-                                            className="mt-2"
-                                        />
-                                    ) : null}
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Description</label>
-                                <Input
-                                    value={editingEntry.description}
-                                    onChange={(e) => setEditingEntry({ ...editingEntry, description: e.target.value })}
-                                    placeholder="Optional description"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Date</label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-start gap-2">
-                                            <CalendarIcon className="w-4 h-4" />
-                                            {format(new Date(editingEntry.date + "T12:00:00"), "MMM d, yyyy")}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={new Date(editingEntry.date + "T12:00:00")}
-                                            onSelect={(date) => date && setEditingEntry({ ...editingEntry, date: getLocalDateStr(date) })}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                            <div className="flex justify-end gap-2 pt-4">
-                                <Button variant="outline" onClick={() => setEditingEntry(null)}>
-                                    Cancel
-                                </Button>
-                                <Button
-                                    onClick={() => {
-                                        updateEntry.mutate({
-                                            id: editingEntry.id,
-                                            amount: Number(editingEntry.amount),
-                                            category: editingEntry.category,
-                                            description: editingEntry.description,
-                                            date: editingEntry.date,
-                                        });
-                                        setEditingEntry(null);
-                                    }}
-                                >
-                                    Save Changes
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </DialogContent>
+        {/* Edit Entry Dialog */ }
+        < Dialog open = {!!editingEntry
+} onOpenChange = {(open) => !open && setEditingEntry(null)}>
+    <DialogContent>
+        <DialogHeader>
+            <DialogTitle>Edit Entry</DialogTitle>
+            <DialogDescription>
+                Update this {editingEntry?.type} entry.
+            </DialogDescription>
+        </DialogHeader>
+        {editingEntry && (
+            <div className="space-y-4 pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Amount</label>
+                        <Input
+                            type="number"
+                            value={editingEntry.amount}
+                            onChange={(e) => setEditingEntry({ ...editingEntry, amount: e.target.value })}
+                            placeholder="Enter amount"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Category</label>
+                        <Select
+                            value={(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).includes(editingEntry.category) ? editingEntry.category : (editingEntry.category ? "Other" : "")}
+                            onValueChange={(v) => {
+                                if (v === "Other") {
+                                    setEditingEntry({ ...editingEntry, category: "" });
+                                } else {
+                                    setEditingEntry({ ...editingEntry, category: v });
+                                }
+                            }}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
+                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                ))}
+                                <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {(!(editingEntry.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).includes(editingEntry.category) && editingEntry.category !== "") || (editingEntry.category === "") ? (
+                            <Input
+                                value={editingEntry.category}
+                                onChange={(e) => setEditingEntry({ ...editingEntry, category: e.target.value })}
+                                placeholder="Enter custom category"
+                                className="mt-2"
+                            />
+                        ) : null}
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <Input
+                        value={editingEntry.description}
+                        onChange={(e) => setEditingEntry({ ...editingEntry, description: e.target.value })}
+                        placeholder="Optional description"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">Date</label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start gap-2">
+                                <CalendarIcon className="w-4 h-4" />
+                                {format(new Date(editingEntry.date + "T12:00:00"), "MMM d, yyyy")}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={new Date(editingEntry.date + "T12:00:00")}
+                                onSelect={(date) => date && setEditingEntry({ ...editingEntry, date: getLocalDateStr(date) })}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setEditingEntry(null)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            updateEntry.mutate({
+                                id: editingEntry.id,
+                                amount: Number(editingEntry.amount),
+                                category: editingEntry.category,
+                                description: editingEntry.description,
+                                date: editingEntry.date,
+                            });
+                            setEditingEntry(null);
+                        }}
+                    >
+                        Save Changes
+                    </Button>
+                </div>
+            </div>
+        )}
+    </DialogContent>
             </Dialog >
 
-            {/* Savings History Modal - Mobile Responsive */}
-            <AnimatePresence>
-                {isSavingsHistoryOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
-                        onClick={() => setIsSavingsHistoryOpen(false)}
-                    >
-                        <motion.div
-                            initial={{ y: "100%", opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: "100%", opacity: 0 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="bg-background rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-lg max-h-[85vh] sm:max-h-[80vh] overflow-hidden sm:m-4"
-                            onClick={(e) => e.stopPropagation()}
+    {/* Savings History Modal - Mobile Responsive */ }
+    <AnimatePresence>
+{
+    isSavingsHistoryOpen && (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+            onClick={() => setIsSavingsHistoryOpen(false)}
+        >
+            <motion.div
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "100%", opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="bg-background rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-lg max-h-[85vh] sm:max-h-[80vh] overflow-hidden sm:m-4"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Handle bar for mobile */}
+                <div className="sm:hidden flex justify-center pt-2">
+                    <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+                </div>
+                <div className="p-4 border-b flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <PiggyBank className="w-5 h-5 text-purple-400" />
+                        <div>
+                            <h2 className="text-lg font-bold">Savings History</h2>
+                            <p className="text-xs text-muted-foreground">
+                                Total: ৳{totalSavings.toLocaleString()} across {savingsGoals.length} goal(s)
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => generatePDF("Savings History", savingsTransactions, "savings")}
+                            className="gap-2"
                         >
-                            {/* Handle bar for mobile */}
-                            <div className="sm:hidden flex justify-center pt-2">
-                                <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-                            </div>
-                            <div className="p-4 border-b flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <PiggyBank className="w-5 h-5 text-purple-400" />
-                                    <div>
-                                        <h2 className="text-lg font-bold">Savings History</h2>
-                                        <p className="text-xs text-muted-foreground">
-                                            Total: ৳{totalSavings.toLocaleString()} across {savingsGoals.length} goal(s)
-                                        </p>
+                            <Download className="w-4 h-4" />
+                            <span className="hidden sm:inline">PDF</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setIsSavingsHistoryOpen(false)}>
+                            <X className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
+                <div className="p-4 overflow-y-auto max-h-[calc(85vh-80px)] sm:max-h-[calc(80vh-80px)] space-y-2">
+                    {savingsTransactions.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">
+                            No savings transactions yet.
+                        </p>
+                    ) : (
+                        savingsTransactions.map(tx => {
+                            const savings = savingsGoals.find(s => s.id === tx.savings_id);
+                            return (
+                                <div key={tx.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg ${tx.type === "deposit" ? "bg-green-500/20" : "bg-red-500/20"}`}>
+                                            {tx.type === "deposit" ? (
+                                                <TrendingUp className="w-4 h-4 text-green-400" />
+                                            ) : (
+                                                <TrendingDown className="w-4 h-4 text-red-400" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-sm">{savings?.name || "Savings"}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {format(new Date(tx.date + "T12:00:00"), "EEE, MMM d, yyyy")}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span className={`font-semibold mr-2 ${tx.type === "deposit" ? "text-green-400" : "text-red-400"}`}>
+                                            {tx.type === "deposit" ? "+" : "-"}৳{tx.amount.toLocaleString()}
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 hover:bg-secondary"
+                                            onClick={() => setEditingSavingsTransaction(tx)}
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                                            onClick={() => deleteSavingsTransaction.mutate({
+                                                id: tx.id,
+                                                savingsId: tx.savings_id,
+                                                amount: tx.amount,
+                                                type: tx.type
+                                            })}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => generatePDF("Savings History", savingsTransactions, "savings")}
-                                        className="gap-2"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                        <span className="hidden sm:inline">PDF</span>
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => setIsSavingsHistoryOpen(false)}>
-                                        <X className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="p-4 overflow-y-auto max-h-[calc(85vh-80px)] sm:max-h-[calc(80vh-80px)] space-y-2">
-                                {savingsTransactions.length === 0 ? (
-                                    <p className="text-center text-muted-foreground py-8">
-                                        No savings transactions yet.
-                                    </p>
-                                ) : (
-                                    savingsTransactions.map(tx => {
-                                        const savings = savingsGoals.find(s => s.id === tx.savings_id);
-                                        return (
-                                            <div key={tx.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`p-2 rounded-lg ${tx.type === "deposit" ? "bg-green-500/20" : "bg-red-500/20"}`}>
-                                                        {tx.type === "deposit" ? (
-                                                            <TrendingUp className="w-4 h-4 text-green-400" />
-                                                        ) : (
-                                                            <TrendingDown className="w-4 h-4 text-red-400" />
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium text-sm">{savings?.name || "Savings"}</p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {format(new Date(tx.date + "T12:00:00"), "EEE, MMM d, yyyy")}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <span className={`font-semibold mr-2 ${tx.type === "deposit" ? "text-green-400" : "text-red-400"}`}>
-                                                        {tx.type === "deposit" ? "+" : "-"}৳{tx.amount.toLocaleString()}
-                                                    </span>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 hover:bg-secondary"
-                                                        onClick={() => setEditingSavingsTransaction(tx)}
-                                                    >
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-500/10"
-                                                        onClick={() => deleteSavingsTransaction.mutate({
-                                                            id: tx.id,
-                                                            savingsId: tx.savings_id,
-                                                            amount: tx.amount,
-                                                            type: tx.type
-                                                        })}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Edit Savings Transaction Dialog */}
-            < Dialog open={!!editingSavingsTransaction} onOpenChange={(open) => !open && setEditingSavingsTransaction(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Edit Transaction</DialogTitle>
-                        <DialogDescription>
-                            Update this savings transaction.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {editingSavingsTransaction && (
-                        <div className="space-y-4 pt-4">
-                            <Tabs
-                                value={editingSavingsTransaction.type}
-                                onValueChange={(v) => setEditingSavingsTransaction({ ...editingSavingsTransaction, type: v as "deposit" | "withdraw" })}
-                            >
-                                <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value="deposit" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">Deposit</TabsTrigger>
-                                    <TabsTrigger value="withdraw" className="data-[state=active]:bg-red-500 data-[state=active]:text-white">Withdraw</TabsTrigger>
-                                </TabsList>
-                            </Tabs>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Amount</label>
-                                <Input
-                                    type="number"
-                                    value={editingSavingsTransaction.amount}
-                                    onChange={(e) => setEditingSavingsTransaction({ ...editingSavingsTransaction, amount: parseFloat(e.target.value) || 0 })}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Date</label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-start gap-2">
-                                            <CalendarIcon className="w-4 h-4" />
-                                            {format(new Date(editingSavingsTransaction.date + "T12:00:00"), "MMM d, yyyy")}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={new Date(editingSavingsTransaction.date + "T12:00:00")}
-                                            onSelect={(date) => date && setEditingSavingsTransaction({ ...editingSavingsTransaction, date: getLocalDateStr(date) })}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Description</label>
-                                <Input
-                                    value={editingSavingsTransaction.description || ""}
-                                    onChange={(e) => setEditingSavingsTransaction({ ...editingSavingsTransaction, description: e.target.value })}
-                                    placeholder="Optional description"
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-4">
-                                <Button variant="ghost" onClick={() => setEditingSavingsTransaction(null)}>
-                                    Cancel
-                                </Button>
-                                <Button
-                                    onClick={() => {
-                                        // We need the original transaction to calculate differences
-                                        // But we are editing the state in place.
-                                        // Wait, if I edit state in place, I lose the original values needed for `updateSavingsTransaction`.
-                                        // I should have kept `editingSavingsTransaction` as the *new* state and find the *original* from the list?
-                                        // Or store `originalTransaction` separately?
-                                        // Actually `savingsTransactions` query data has the original.
-                                        const original = savingsTransactions.find(t => t.id === editingSavingsTransaction.id);
-                                        if (original) {
-                                            updateSavingsTransaction.mutate({
-                                                id: editingSavingsTransaction.id,
-                                                savingsId: editingSavingsTransaction.savings_id,
-                                                oldAmount: original.amount,
-                                                oldType: original.type,
-                                                newAmount: editingSavingsTransaction.amount,
-                                                newType: editingSavingsTransaction.type,
-                                                newDate: editingSavingsTransaction.date,
-                                                newDescription: editingSavingsTransaction.description || undefined
-                                            });
-                                            setEditingSavingsTransaction(null);
-                                        }
-                                    }}
-                                >
-                                    Save Changes
-                                </Button>
-                            </div>
-                        </div>
+                            );
+                        })
                     )}
-                </DialogContent>
+                </div>
+            </motion.div>
+        </motion.div>
+    )
+}
+            </AnimatePresence >
+
+    {/* Edit Savings Transaction Dialog */ }
+    < Dialog open = {!!editingSavingsTransaction} onOpenChange = {(open) => !open && setEditingSavingsTransaction(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Edit Transaction</DialogTitle>
+                <DialogDescription>
+                    Update this savings transaction.
+                </DialogDescription>
+            </DialogHeader>
+            {editingSavingsTransaction && (
+                <div className="space-y-4 pt-4">
+                    <Tabs
+                        value={editingSavingsTransaction.type}
+                        onValueChange={(v) => setEditingSavingsTransaction({ ...editingSavingsTransaction, type: v as "deposit" | "withdraw" })}
+                    >
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="deposit" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">Deposit</TabsTrigger>
+                            <TabsTrigger value="withdraw" className="data-[state=active]:bg-red-500 data-[state=active]:text-white">Withdraw</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Amount</label>
+                        <Input
+                            type="number"
+                            value={editingSavingsTransaction.amount}
+                            onChange={(e) => setEditingSavingsTransaction({ ...editingSavingsTransaction, amount: parseFloat(e.target.value) || 0 })}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Date</label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-full justify-start gap-2">
+                                    <CalendarIcon className="w-4 h-4" />
+                                    {format(new Date(editingSavingsTransaction.date + "T12:00:00"), "MMM d, yyyy")}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={new Date(editingSavingsTransaction.date + "T12:00:00")}
+                                    onSelect={(date) => date && setEditingSavingsTransaction({ ...editingSavingsTransaction, date: getLocalDateStr(date) })}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Description</label>
+                        <Input
+                            value={editingSavingsTransaction.description || ""}
+                            onChange={(e) => setEditingSavingsTransaction({ ...editingSavingsTransaction, description: e.target.value })}
+                            placeholder="Optional description"
+                        />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="ghost" onClick={() => setEditingSavingsTransaction(null)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                // We need the original transaction to calculate differences
+                                // But we are editing the state in place.
+                                // Wait, if I edit state in place, I lose the original values needed for `updateSavingsTransaction`.
+                                // I should have kept `editingSavingsTransaction` as the *new* state and find the *original* from the list?
+                                // Or store `originalTransaction` separately?
+                                // Actually `savingsTransactions` query data has the original.
+                                const original = savingsTransactions.find(t => t.id === editingSavingsTransaction.id);
+                                if (original) {
+                                    updateSavingsTransaction.mutate({
+                                        id: editingSavingsTransaction.id,
+                                        savingsId: editingSavingsTransaction.savings_id,
+                                        oldAmount: original.amount,
+                                        oldType: original.type,
+                                        newAmount: editingSavingsTransaction.amount,
+                                        newType: editingSavingsTransaction.type,
+                                        newDate: editingSavingsTransaction.date,
+                                        newDescription: editingSavingsTransaction.description || undefined
+                                    });
+                                    setEditingSavingsTransaction(null);
+                                }
+                            }}
+                        >
+                            Save Changes
+                        </Button>
+                    </div>
+                </div>
+            )}
+        </DialogContent>
             </Dialog >
         </AppLayout >
     );

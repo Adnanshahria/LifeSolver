@@ -73,7 +73,22 @@ export interface NoteHooks {
     addNote: { mutateAsync: (data: unknown) => Promise<void> };
     updateNote: { mutateAsync: (data: unknown) => Promise<void> };
     deleteNote: { mutateAsync: (id: string) => Promise<void> };
-    notes: Array<{ id: string; title: string; content?: string; tags?: string }>;
+    togglePin: { mutate: (note: unknown) => void };
+    updateColor: { mutate: (data: unknown) => void };
+    archiveNote: { mutate: (data: unknown) => void };
+    trashNote: { mutate: (data: unknown) => void };
+    notes: Array<{
+        id: string;
+        title: string;
+        content?: string;
+        tags?: string;
+        is_pinned: number;
+        color: string;
+        is_archived: number;
+        is_trashed: number;
+        created_at: string;
+        updated_at: string;
+    }>;
 }
 
 export interface HabitHooks {

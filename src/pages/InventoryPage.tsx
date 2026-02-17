@@ -398,8 +398,8 @@ export default function InventoryPage() {
 
                     {/* Stats Cards */}
                     <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
-                        <div className="glass-card p-2 sm:p-3 flex items-center gap-2 sm:gap-3">
-                            <div className="bg-primary/10 p-1.5 sm:p-2 rounded-full text-primary">
+                        <div className="relative overflow-hidden rounded-2xl p-2 sm:p-3 flex items-center gap-2 sm:gap-3 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20">
+                            <div className="bg-primary/20 p-1.5 sm:p-2 rounded-full text-primary">
                                 <DollarSign className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                             </div>
                             <div className="min-w-0">
@@ -407,8 +407,8 @@ export default function InventoryPage() {
                                 <h3 className="text-sm sm:text-lg font-bold truncate">৳{totalValue.toLocaleString()}</h3>
                             </div>
                         </div>
-                        <div className="glass-card p-2 sm:p-3 flex items-center gap-2 sm:gap-3">
-                            <div className="bg-blue-500/10 p-1.5 sm:p-2 rounded-full text-blue-500">
+                        <div className="relative overflow-hidden rounded-2xl p-2 sm:p-3 flex items-center gap-2 sm:gap-3 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border border-blue-500/20">
+                            <div className="bg-blue-500/20 p-1.5 sm:p-2 rounded-full text-blue-500">
                                 <Package className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                             </div>
                             <div className="min-w-0">
@@ -416,8 +416,8 @@ export default function InventoryPage() {
                                 <h3 className="text-sm sm:text-lg font-bold">{filteredItems.length}</h3>
                             </div>
                         </div>
-                        <div className="glass-card p-2 sm:p-3 flex items-center gap-2 sm:gap-3">
-                            <div className="bg-green-500/10 p-1.5 sm:p-2 rounded-full text-green-500">
+                        <div className="relative overflow-hidden rounded-2xl p-2 sm:p-3 flex items-center gap-2 sm:gap-3 bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent border border-green-500/20">
+                            <div className="bg-green-500/20 p-1.5 sm:p-2 rounded-full text-green-500">
                                 <CheckCircle className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                             </div>
                             <div className="min-w-0">
@@ -425,8 +425,8 @@ export default function InventoryPage() {
                                 <h3 className="text-sm sm:text-lg font-bold">{stats.activeItems}</h3>
                             </div>
                         </div>
-                        <div className="glass-card p-2 sm:p-3 flex items-center gap-2 sm:gap-3">
-                            <div className="bg-orange-500/10 p-1.5 sm:p-2 rounded-full text-orange-500">
+                        <div className="relative overflow-hidden rounded-2xl p-2 sm:p-3 flex items-center gap-2 sm:gap-3 bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent border border-orange-500/20">
+                            <div className="bg-orange-500/20 p-1.5 sm:p-2 rounded-full text-orange-500">
                                 <Tag className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                             </div>
                             <div className="min-w-0">
@@ -459,7 +459,7 @@ export default function InventoryPage() {
                                         initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
-                                        className={`glass-card p-3 flex flex-col justify-between group relative overflow-hidden ${item.status === 'sold' ? 'opacity-70 bg-secondary/20' : ''}`}
+                                        className={`relative overflow-hidden rounded-2xl p-3 flex flex-col justify-between group transition-all duration-300 border border-border/40 shadow-sm hover:shadow-md bg-gradient-to-br from-gray-500/5 via-gray-500/0 to-transparent ${item.status === 'sold' ? 'opacity-70 bg-secondary/20' : ''}`}
                                     >
                                         {item.status === 'sold' && (
                                             <div className="absolute top-1.5 right-1.5 z-10">
