@@ -78,16 +78,17 @@ export interface NoteHooks {
 
 export interface HabitHooks {
     addHabit: { mutateAsync: (data: unknown) => Promise<void> };
-    completeHabit: { mutateAsync: (id: string) => Promise<void> };
+    completeHabit: { mutateAsync: (data: unknown) => Promise<void> };
     deleteHabit: { mutateAsync: (id: string) => Promise<void> };
-    habits: Array<{ id: string; name: string }>;
+    habits: Array<{ id: string; habit_name: string; streak_count: number; last_completed_date?: string; category: string }>;
 }
 
 export interface StudyHooks {
     addChapter: { mutateAsync: (data: unknown) => Promise<void> };
     updateProgress: { mutateAsync: (data: unknown) => Promise<void> };
     deleteChapter: { mutateAsync: (id: string) => Promise<void> };
-    chapters: Array<{ id: string; title: string }>;
+    createStudyTask?: (data: unknown) => Promise<unknown>;
+    chapters: Array<{ id: string; subject: string; chapter_name: string; progress_percentage: number; status: string }>;
 }
 
 export interface InventoryHooks {

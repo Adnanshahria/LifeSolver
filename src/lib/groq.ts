@@ -204,8 +204,29 @@ export async function getDailyBriefing(data: {
     return askAI(prompt);
 }
 
-// Get study tips for a subject
-export async function getStudyTips(subject: string): Promise<string> {
-    const prompt = `Give me 3 quick, practical study tips for learning ${subject}. Keep each tip to 1-2 sentences.`;
+// Get study tips for a subject/chapter
+export async function getStudyTips(subject: string, chapterName?: string): Promise<string> {
+    const topic = chapterName ? `${subject} — ${chapterName}` : subject;
+    const prompt = `Give me 3 quick, practical study tips for learning ${topic}. Keep each tip to 1-2 sentences. Focus on effective techniques and key concepts to master.`;
     return askAI(prompt);
 }
+
+// Get habit tips for a specific habit
+export async function getHabitTips(habitName: string, streak: number): Promise<string> {
+    const streakContext = streak > 0 ? `Current streak: ${streak} days.` : "No active streak yet.";
+    const prompt = `Give 2-3 quick, motivational tips for building the habit "${habitName}". ${streakContext} Keep each tip to 1-2 sentences. Be practical and encouraging.`;
+    return askAI(prompt);
+}
+
+// Get AI habit coaching based on all habits
+export async function getHabitCoaching(habits: { name: string; streak: number; completedToday: boolean }[]): Promise<string> {
+    const habitsList = habits.map(h => `- ${h.name}: ${h.streak} day streak, ${h.completedToday ? "done today ✅" : "not done yet"}`).join("\n");
+    const completed = habits.filter(h => h.completedToday).length;
+    const prompt = `You're a habit coach. Analyze these habits and give a brief personalized recommendation (3-4 sentences max):
+
+${habitsList}
+
+Progress: ${completed}/${habits.length} done today. Give specific, actionable advice for which habit to focus on next and why.`;
+    return askAI(prompt);
+}
+

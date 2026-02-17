@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus, Package, Store, Trash2, Edit2, LayoutGrid, List,
     DollarSign, Tag, Calendar, CheckCircle, AlertTriangle, Search, Filter,
-    CreditCard, Wrench, ChevronDown
+    CreditCard, Wrench
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -221,7 +221,7 @@ export default function InventoryPage() {
                             <p className="text-muted-foreground text-sm">Manage your assets and belongings</p>
                         </div>
 
-                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1">
+                        <div className="top-toolbar mb-4 w-full">
                             {/* View Toggle */}
                             <div className="flex bg-secondary rounded-lg p-0.5 shrink-0">
                                 <button
@@ -241,19 +241,17 @@ export default function InventoryPage() {
                             </div>
 
                             {/* Category Filter */}
-                            <div className="relative">
-                                <select
-                                    value={categoryFilter}
-                                    onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="appearance-none bg-secondary/50 border border-border rounded-lg px-3 pr-8 py-1.5 text-xs sm:text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
-                                >
-                                    <option value="all">All Categories</option>
+                            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                                <SelectTrigger className="w-auto min-w-[120px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Categories</SelectItem>
                                     {CATEGORIES.map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
+                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                     ))}
-                                </select>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                            </div>
+                                </SelectContent>
+                            </Select>
 
                             {/* Search */}
                             <div className="relative flex-1 min-w-[120px] max-w-[240px]">

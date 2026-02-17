@@ -482,21 +482,20 @@ export default function TasksPage() {
                     </div>
 
                     {/* Single-row controls */}
-                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1">
+                    {/* Single-row controls - Top Toolbar */}
+                    <div className="top-toolbar mb-4">
 
-                        {/* Tab Dropdown (native select) */}
-                        <div className="relative">
-                            <select
-                                value={tabView}
-                                onChange={(e) => setTabView(e.target.value as typeof tabView)}
-                                className="appearance-none bg-secondary/50 border border-border rounded-lg px-3 pr-8 py-1.5 text-xs sm:text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
-                            >
-                                <option value="upcoming">Soon ({tabCounts.upcoming})</option>
-                                <option value="active">Active ({tabCounts.active})</option>
-                                <option value="archive">Archive</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                        </div>
+                        {/* Tab Dropdown */}
+                        <Select value={tabView} onValueChange={(v) => setTabView(v as typeof tabView)}>
+                            <SelectTrigger className="w-auto min-w-[100px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="upcoming">Soon ({tabCounts.upcoming})</SelectItem>
+                                <SelectItem value="active">Active ({tabCounts.active})</SelectItem>
+                                <SelectItem value="archive">Archive</SelectItem>
+                            </SelectContent>
+                        </Select>
 
                         {/* Context Filter */}
                         <Popover>

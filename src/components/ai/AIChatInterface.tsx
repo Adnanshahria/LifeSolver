@@ -260,7 +260,7 @@ export function AIChatInterface() {
 
                 // HABITS
                 case "ADD_HABIT":
-                    await addHabit.mutateAsync(data.habit_name as string);
+                    await addHabit.mutateAsync({ name: String(data.habit_name || data.name || ""), category: (data.category ? String(data.category) : "general") as import("@/hooks/useHabits").HabitCategory });
                     break;
                 case "COMPLETE_HABIT":
                     const habitToComplete = habits?.find(h => h.habit_name.toLowerCase().includes((data.habit_name as string || "").toLowerCase()));

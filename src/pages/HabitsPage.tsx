@@ -1,69 +1,48 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Flame, Check, Trash2, Target, TrendingUp, Award, Zap, Calendar, Sparkles } from "lucide-react";
+import {
+    Plus, Flame, Check, Trash2, Target, TrendingUp, Zap,
+    Lightbulb, Search, Brain, Sparkles, Edit2
+} from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { SEO } from "@/components/seo/SEO";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { useHabits, Habit } from "@/hooks/useHabits";
+import { useHabits, Habit, HABIT_CATEGORIES, HabitCategory } from "@/hooks/useHabits";
+import { getHabitTips, getHabitCoaching } from "@/lib/groq";
+
+import { useAI } from "@/contexts/AIContext";
 import { cn } from "@/lib/utils";
 
-// Circular Progress for completion ring
-function CompletionRing({ completed, total, size = 100 }: { completed: number; total: number; size?: number }) {
-    const progress = total > 0 ? (completed / total) * 100 : 0;
-    const strokeWidth = 8;
-    const radius = (size - strokeWidth) / 2;
-    const circumference = radius * 2 * Math.PI;
-    const offset = circumference - (progress / 100) * circumference;
-
-    return (
-        <div className="relative" style={{ width: size, height: size }}>
-            <svg width={size} height={size} className="transform -rotate-90">
-                <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={strokeWidth} className="text-secondary/50" />
-                <motion.circle
-                    cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="url(#completionGradient)" strokeWidth={strokeWidth} strokeLinecap="round"
-                    initial={{ strokeDashoffset: circumference }}
-                    animate={{ strokeDashoffset: offset }}
-                    transition={{ duration: 1.2, ease: "easeOut" }}
-                    strokeDasharray={circumference}
-                />
-                <defs>
-                    <linearGradient id="completionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#10b981" />
-                        <stop offset="100%" stopColor="#06d6a0" />
-                    </linearGradient>
-                </defs>
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold">{completed}</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">of {total}</span>
-            </div>
-        </div>
-    );
-}
-
 // Streak flame with intensity
-function StreakFlame({ streak }: { streak: number }) {
+function StreakFlame({ streak, size = "md" }: { streak: number; size?: "sm" | "md" }) {
     const intensity = streak >= 30 ? "text-red-500" : streak >= 14 ? "text-orange-500" : streak >= 7 ? "text-amber-500" : streak > 0 ? "text-yellow-500" : "text-muted-foreground/30";
     const fillIntensity = streak >= 7 ? `fill-current ${intensity}` : "";
-    return <Flame className={cn("w-5 h-5 transition-all", intensity, fillIntensity)} />;
+    const sizeClass = size === "sm" ? "w-3.5 h-3.5" : "w-5 h-5";
+    return <Flame className={cn(sizeClass, "transition-all", intensity, fillIntensity)} />;
 }
 
 export default function HabitsPage() {
-    const { habits, isLoading, addHabit, completeHabit, deleteHabit } = useHabits();
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [newHabitName, setNewHabitName] = useState("");
+    const { habits, isLoading, addHabit, updateHabit, completeHabit, deleteHabit } = useHabits();
+    const { setPageContext } = useAI();
 
-    const handleAddHabit = async () => {
-        if (!newHabitName.trim()) return;
-        await addHabit.mutateAsync(newHabitName);
-        setNewHabitName("");
-        setIsDialogOpen(false);
-    };
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+    const [newHabit, setNewHabit] = useState({ name: "", category: "general" as HabitCategory });
+    const [searchTerm, setSearchTerm] = useState("");
+    const [activeCategory, setActiveCategory] = useState<string>("all");
+
+    // AI state
+    const [aiTips, setAiTips] = useState<string | null>(null);
+    const [aiTipsFor, setAiTipsFor] = useState<string>("");
+    const [loadingTips, setLoadingTips] = useState(false);
+    const [coaching, setCoaching] = useState<string | null>(null);
+    const [loadingCoaching, setLoadingCoaching] = useState(false);
 
     const isCompletedToday = (habit: Habit) => {
         if (!habit.last_completed_date) return false;
@@ -94,86 +73,278 @@ export default function HabitsPage() {
     };
     const last7Days = getLast7Days();
 
+    // Stats
     const totalCompleted = habits.filter(isCompletedToday).length;
     const completionRate = habits.length > 0 ? Math.round((totalCompleted / habits.length) * 100) : 0;
-    const bestStreak = habits.length > 0 ? Math.max(...habits.map(h => h.streak_count)) : 0;
-    const totalStreaks = habits.reduce((sum, h) => sum + h.streak_count, 0);
+    const bestStreak = habits.length > 0 ? Math.max(...habits.map(h => h.streak_count), 0) : 0;
 
-    // Sort: uncompleted first, then by streak desc
-    const sortedHabits = useMemo(() => {
-        return [...habits].sort((a, b) => {
+    // Set AI Page Context
+    useEffect(() => {
+        setPageContext(`User is on Habits Page. 
+        Active Habits: ${habits.length}, Done Today: ${totalCompleted}/${habits.length}.
+        Best Streak: ${bestStreak} days. Completion Rate: ${completionRate}%.
+        Habits: ${habits.map(h => `${h.habit_name} (${h.streak_count}d streak)`).join(", ") || "None yet"}.`);
+    }, [habits, totalCompleted, bestStreak, completionRate, setPageContext]);
+
+    // Filtering
+    const filteredHabits = useMemo(() => {
+        let result = [...habits];
+        if (activeCategory !== "all") result = result.filter(h => h.category === activeCategory);
+        if (searchTerm) result = result.filter(h => h.habit_name.toLowerCase().includes(searchTerm.toLowerCase()));
+        // Sort: uncompleted first, then by streak desc
+        return result.sort((a, b) => {
             const aToday = isCompletedToday(a);
             const bToday = isCompletedToday(b);
             if (aToday !== bToday) return aToday ? 1 : -1;
             return b.streak_count - a.streak_count;
         });
-    }, [habits]);
+    }, [habits, activeCategory, searchTerm]);
+
+    // Weekly heatmap: aggregate completion per day
+    const weeklyHeatmap = useMemo(() => {
+        return last7Days.map(date => {
+            const completed = habits.filter(h => isCompletedOnDate(h, date)).length;
+            const isToday = date.toDateString() === new Date().toDateString();
+            return { date, completed, total: habits.length, isToday };
+        });
+    }, [habits, last7Days]);
+
+    const handleAddHabit = async () => {
+        if (!newHabit.name.trim()) return;
+        await addHabit.mutateAsync({ name: newHabit.name, category: newHabit.category });
+        setNewHabit({ name: "", category: "general" });
+        setIsDialogOpen(false);
+    };
+
+    const handleEditHabit = async () => {
+        if (!editingHabit) return;
+        await updateHabit.mutateAsync({
+            id: editingHabit.id,
+            name: editingHabit.habit_name,
+            category: editingHabit.category,
+        });
+        setEditingHabit(null);
+    };
+
+    const handleGetTips = async (habit: Habit) => {
+        setLoadingTips(true);
+        setAiTipsFor(habit.habit_name);
+        try {
+            const tips = await getHabitTips(habit.habit_name, habit.streak_count);
+            setAiTips(tips);
+        } catch {
+            setAiTips("Failed to get tips. Please try again.");
+        }
+        setLoadingTips(false);
+    };
+
+    const handleGetCoaching = async () => {
+        setLoadingCoaching(true);
+        try {
+            const habitData = habits.map(h => ({
+                name: h.habit_name,
+                streak: h.streak_count,
+                completedToday: isCompletedToday(h),
+            }));
+            const result = await getHabitCoaching(habitData);
+            setCoaching(result);
+        } catch {
+            setCoaching("Failed to get coaching. Please try again.");
+        }
+        setLoadingCoaching(false);
+    };
+
+    const getCategoryEmoji = (cat: string) => HABIT_CATEGORIES.find(c => c.value === cat)?.emoji || "📌";
 
     return (
         <AppLayout>
-            <SEO title="Habit Tracker" description="Build lasting habits with streak tracking and visual progress." />
+            <SEO title="Habit Tracker" description="Build lasting habits with streak tracking, AI coaching, and visual progress." />
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-6">
 
-                {/* ===== HEADER ===== */}
-                <div className="flex items-start sm:items-center justify-between flex-wrap gap-3">
-                    <div className="hidden md:block">
-                        <div className="flex items-center gap-3 mb-1">
-                            <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/20">
-                                <Target className="w-6 h-6 text-emerald-400" />
-                            </div>
-                            <h1 className="text-3xl font-bold">Habit Tracker</h1>
-                        </div>
-                        <p className="text-muted-foreground text-sm ml-14">Build consistency, one day at a time</p>
+                {/* ===== SINGLE-ROW CONTROLS ===== */}
+                <div className="flex items-center gap-4">
+                    <div className="hidden md:flex items-center gap-3 shrink-0">
+                        <h1 className="text-3xl font-bold">Habits</h1>
                     </div>
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="gap-2 shadow-lg shadow-primary/20"><Plus className="w-4 h-4" /> New Habit</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader><DialogTitle>Create New Habit</DialogTitle></DialogHeader>
-                            <div className="space-y-4 pt-4">
-                                <Input placeholder="Habit name (e.g., Exercise, Read, Meditate)" value={newHabitName} onChange={(e) => setNewHabitName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddHabit()} />
-                                <Button onClick={handleAddHabit} className="w-full" disabled={addHabit.isPending}>
-                                    {addHabit.isPending ? "Creating..." : "Create Habit"}
+
+                    <div className="top-toolbar mb-4">
+                        {/* Category Filter */}
+                        <Select value={activeCategory} onValueChange={setActiveCategory}>
+                            <SelectTrigger className="w-auto min-w-[100px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                {HABIT_CATEGORIES.map(c => (
+                                    <SelectItem key={c.value} value={c.value}>{c.emoji} {c.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        {/* Search */}
+                        <div className="relative flex-1 min-w-[100px] max-w-[200px]">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                            <Input
+                                placeholder="Search..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-8 h-8 text-xs sm:text-sm"
+                            />
+                        </div>
+
+                        {/* AI Coach Button */}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs sm:text-sm"
+                            onClick={handleGetCoaching}
+                            disabled={loadingCoaching || habits.length === 0}
+                        >
+                            <Brain className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">{loadingCoaching ? "Thinking..." : "AI Coach"}</span>
+                        </Button>
+
+                        {/* Add Habit */}
+                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="icon" className="h-8 w-8 sm:w-auto sm:px-3 sm:gap-1.5 shadow-lg shadow-primary/20">
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline">Habit</span>
                                 </Button>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
+                            </DialogTrigger>
+                            <DialogContent className="w-[95vw] max-w-md rounded-2xl sm:rounded-xl">
+                                <DialogHeader><DialogTitle>Create New Habit</DialogTitle></DialogHeader>
+                                <div className="space-y-4 pt-4">
+                                    <Input
+                                        placeholder="Habit name (e.g., Exercise, Read, Meditate)"
+                                        value={newHabit.name}
+                                        onChange={(e) => setNewHabit({ ...newHabit, name: e.target.value })}
+                                        onKeyDown={(e) => e.key === "Enter" && handleAddHabit()}
+                                    />
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground mb-2 block">Category</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {HABIT_CATEGORIES.map(c => (
+                                                <button
+                                                    key={c.value}
+                                                    onClick={() => setNewHabit({ ...newHabit, category: c.value })}
+                                                    className={cn(
+                                                        "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                                                        newHabit.category === c.value
+                                                            ? "bg-primary text-primary-foreground border-primary"
+                                                            : "bg-secondary/50 border-border hover:border-primary/30"
+                                                    )}
+                                                >
+                                                    {c.emoji} {c.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <Button onClick={handleAddHabit} className="w-full" disabled={addHabit.isPending}>
+                                        {addHabit.isPending ? "Creating..." : "Create Habit"}
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </div>
 
-                {/* ===== STATS + COMPLETION RING ===== */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
-                    {/* Completion Ring */}
-                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                        className="col-span-2 md:col-span-1 glass-card p-3 sm:p-4 flex flex-col items-center justify-center bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/10"
-                    >
-                        <CompletionRing completed={totalCompleted} total={habits.length} size={90} />
-                        <p className="text-xs text-muted-foreground mt-2">Today's Progress</p>
-                    </motion.div>
-
-                    {/* Stat cards */}
+                {/* ===== STATS GRID ===== */}
+                <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
                     {[
-                        { icon: Zap, label: "Active Habits", value: habits.length, color: "text-blue-400", bg: "from-blue-500/15 to-blue-500/5" },
-                        { icon: Check, label: "Done Today", value: totalCompleted, color: "text-green-400", bg: "from-green-500/15 to-green-500/5" },
-                        { icon: Flame, label: "Best Streak", value: `${bestStreak}d`, color: "text-orange-400", bg: "from-orange-500/15 to-orange-500/5" },
-                        { icon: TrendingUp, label: "Completion", value: `${completionRate}%`, color: "text-violet-400", bg: "from-violet-500/15 to-violet-500/5" },
-                    ].map((stat, i) => (
-                        <motion.div key={stat.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-                            className={`glass-card p-3 sm:p-4 bg-gradient-to-br ${stat.bg} border border-white/5`}
-                        >
+                        { icon: Zap, label: "Active", value: habits.length, color: "text-blue-400", bg: "from-blue-500/15 to-blue-500/5" },
+                        { icon: Check, label: "Today", value: totalCompleted, color: "text-green-400", bg: "from-green-500/15 to-green-500/5" },
+                        { icon: Flame, label: "Best", value: `${bestStreak}d`, color: "text-orange-400", bg: "from-orange-500/15 to-orange-500/5" },
+                        { icon: TrendingUp, label: "Rate", value: `${completionRate}%`, color: "text-violet-400", bg: "from-violet-500/15 to-violet-500/5" },
+                    ].map((stat) => (
+                        <div key={stat.label} className={`glass-card p-2 sm:p-3 bg-gradient-to-br ${stat.bg} border border-white/5`}>
                             <div className="flex items-center gap-2 sm:gap-3">
-                                <div className={`p-1.5 sm:p-2 rounded-lg bg-background/50 ${stat.color}`}><stat.icon className="w-4 h-4 sm:w-5 sm:h-5" /></div>
-                                <div>
-                                    <p className="text-lg sm:text-2xl font-bold">{stat.value}</p>
-                                    <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</p>
+                                <div className={`p-1.5 sm:p-2 rounded-lg bg-background/50 ${stat.color}`}>
+                                    <stat.icon className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-sm sm:text-lg font-bold">{stat.value}</p>
+                                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{stat.label}</p>
                                 </div>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
+                {/* ===== WEEKLY HEATMAP ===== */}
+                <div className="glass-card p-3 sm:p-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground">This Week</p>
+                        <p className="text-xs text-muted-foreground">{totalCompleted}/{habits.length} today</p>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                        {weeklyHeatmap.map((day, i) => {
+                            const pct = day.total > 0 ? (day.completed / day.total) * 100 : 0;
+                            return (
+                                <div key={i} className="flex flex-col items-center gap-1">
+                                    <div className={cn(
+                                        "w-full aspect-square rounded-lg sm:rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-bold border transition-all",
+                                        pct >= 100 ? "bg-green-500/80 border-green-500 text-white shadow-sm shadow-green-500/20" :
+                                            pct >= 50 ? "bg-green-500/30 border-green-500/40 text-green-400" :
+                                                pct > 0 ? "bg-amber-500/20 border-amber-500/30 text-amber-400" :
+                                                    day.isToday ? "border-primary/50 bg-primary/10 text-foreground" :
+                                                        "border-border bg-secondary/30 text-muted-foreground"
+                                    )}>
+                                        {day.date.getDate()}
+                                    </div>
+                                    <span className="text-[9px] text-muted-foreground uppercase">
+                                        {day.date.toLocaleDateString('en-US', { weekday: 'narrow' })}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* ===== AI COACHING ===== */}
+                <AnimatePresence>
+                    {coaching && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: "auto" }}
+                            exit={{ opacity: 0, y: -10, height: 0 }}
+                            className="glass-card p-4 border border-violet-500/20 bg-gradient-to-r from-violet-500/5 to-transparent"
+                        >
+                            <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-lg bg-violet-500/10"><Brain className="w-5 h-5 text-violet-400" /></div>
+                                <div className="flex-1">
+                                    <h3 className="font-semibold mb-1 text-violet-300">AI Coach</h3>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{coaching}</p>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => setCoaching(null)} className="text-muted-foreground hover:text-foreground">×</Button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* ===== AI TIPS (per-habit) ===== */}
+                <AnimatePresence>
+                    {aiTips && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: "auto" }}
+                            exit={{ opacity: 0, y: -10, height: 0 }}
+                            className="glass-card p-4 border border-yellow-500/20 bg-gradient-to-r from-yellow-500/5 to-transparent"
+                        >
+                            <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-lg bg-yellow-500/10"><Lightbulb className="w-5 h-5 text-yellow-400" /></div>
+                                <div className="flex-1">
+                                    <h3 className="font-semibold mb-1 text-yellow-300">Tips — {aiTipsFor}</h3>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiTips}</p>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => setAiTips(null)} className="text-muted-foreground hover:text-foreground">×</Button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 {/* ===== HABIT LIST ===== */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                     {isLoading ? (
                         <div className="text-center py-12">
                             <div className="animate-pulse flex flex-col items-center gap-3">
@@ -181,92 +352,129 @@ export default function HabitsPage() {
                                 <span className="text-muted-foreground">Loading habits...</span>
                             </div>
                         </div>
-                    ) : habits.length === 0 ? (
+                    ) : filteredHabits.length === 0 ? (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
                             <div className="flex flex-col items-center gap-4">
                                 <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
                                     <Target className="w-12 h-12 text-emerald-400 opacity-60" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-semibold mb-1">Start Building Habits</h3>
-                                    <p className="text-muted-foreground text-sm">Create your first habit to begin your streak!</p>
+                                    <h3 className="text-lg font-semibold mb-1">
+                                        {searchTerm || activeCategory !== "all" ? "No habits match your filter" : "Start Building Habits"}
+                                    </h3>
+                                    <p className="text-muted-foreground text-sm">
+                                        {searchTerm || activeCategory !== "all"
+                                            ? "Try a different search or category"
+                                            : "Create your first habit to begin your streak!"}
+                                    </p>
                                 </div>
-                                <Button onClick={() => setIsDialogOpen(true)} className="gap-2 mt-2"><Plus className="w-4 h-4" /> Create First Habit</Button>
+                                {!searchTerm && activeCategory === "all" && (
+                                    <Button onClick={() => setIsDialogOpen(true)} className="gap-2 mt-2">
+                                        <Plus className="w-4 h-4" /> Create First Habit
+                                    </Button>
+                                )}
                             </div>
                         </motion.div>
                     ) : (
-                        sortedHabits.map((habit, index) => {
+                        filteredHabits.map((habit, index) => {
                             const completed = isCompletedToday(habit);
                             return (
                                 <motion.div
                                     key={habit.id}
                                     initial={{ opacity: 0, x: -15 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.05 }}
+                                    transition={{ delay: index * 0.04 }}
                                     className={cn(
-                                        "glass-card p-3 sm:p-5 transition-all group",
+                                        "glass-card p-3 sm:p-4 transition-all group",
                                         completed ? "border-green-500/20 bg-gradient-to-r from-green-500/5 to-transparent" : "hover:border-primary/20"
                                     )}
                                 >
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                        <div className="flex items-center gap-4 flex-1">
-                                            {/* Completion Button */}
-                                            <button
-                                                onClick={() => !completed && completeHabit.mutate(habit)}
-                                                disabled={completed}
-                                                className={cn(
-                                                    "w-12 h-12 rounded-xl flex items-center justify-center transition-all shadow-sm shrink-0",
-                                                    completed
-                                                        ? "bg-green-500 text-white shadow-green-500/30 scale-105"
-                                                        : "bg-secondary hover:bg-primary/10 hover:ring-2 hover:ring-primary/20 text-muted-foreground hover:text-primary"
-                                                )}
-                                            >
-                                                <Check className={cn("w-6 h-6", completed ? "stroke-[3px]" : "")} />
-                                            </button>
+                                    <div className="flex items-center gap-3">
+                                        {/* Completion Button */}
+                                        <button
+                                            onClick={() => !completed && completeHabit.mutate(habit)}
+                                            disabled={completed}
+                                            className={cn(
+                                                "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center transition-all shadow-sm shrink-0",
+                                                completed
+                                                    ? "bg-green-500 text-white shadow-green-500/30"
+                                                    : "bg-secondary hover:bg-primary/10 hover:ring-2 hover:ring-primary/20 text-muted-foreground hover:text-primary"
+                                            )}
+                                        >
+                                            <Check className={cn("w-5 h-5", completed ? "stroke-[3px]" : "")} />
+                                        </button>
 
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className={cn("font-semibold text-lg", completed && "text-green-400")}>{habit.habit_name}</h3>
-                                                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <StreakFlame streak={habit.streak_count} />
-                                                        <span className={cn(habit.streak_count > 0 && "text-orange-400 font-medium")}>
-                                                            {habit.streak_count} day{habit.streak_count !== 1 ? "s" : ""}
-                                                        </span>
-                                                    </div>
-                                                    {completed && (
-                                                        <Badge variant="outline" className="text-[10px] h-5 border-green-500/30 text-green-400">
-                                                            <Sparkles className="w-3 h-3 mr-1" /> Done today
-                                                        </Badge>
-                                                    )}
+                                        {/* Habit Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <h3 className={cn("font-semibold text-sm sm:text-base truncate", completed && "text-green-400")}>{habit.habit_name}</h3>
+                                                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 shrink-0">
+                                                    {getCategoryEmoji(habit.category)} {habit.category}
+                                                </Badge>
+                                                {completed && (
+                                                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-green-500/30 text-green-400 shrink-0">
+                                                        <Sparkles className="w-2.5 h-2.5 mr-0.5" />Done
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <div className="flex items-center gap-1">
+                                                    <StreakFlame streak={habit.streak_count} size="sm" />
+                                                    <span className={cn(habit.streak_count > 0 && "text-orange-400 font-medium")}>
+                                                        {habit.streak_count}d
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Weekly Visual */}
-                                        <div className="flex items-center gap-2 self-end md:self-auto overflow-x-auto scrollbar-none">
-                                            <div className="flex gap-1 sm:gap-1.5">
-                                                {last7Days.map((date, i) => {
-                                                    const isDone = isCompletedOnDate(habit, date);
-                                                    const isToday = date.toDateString() === new Date().toDateString();
-                                                    return (
-                                                        <div key={i} className="flex flex-col items-center gap-1">
-                                                            <div className={cn(
-                                                                "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-[10px] font-medium border transition-all",
-                                                                isDone ? "bg-green-500/80 border-green-500 text-white shadow-sm shadow-green-500/20" :
-                                                                    isToday ? "border-primary/50 bg-primary/10 text-foreground" :
-                                                                        "border-border bg-secondary/30 text-muted-foreground"
-                                                            )} title={date.toDateString()}>
-                                                                {date.getDate()}
-                                                            </div>
-                                                            <span className="text-[9px] text-muted-foreground uppercase">{date.toLocaleDateString('en-US', { weekday: 'narrow' })}</span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                            <Button variant="ghost" size="icon" onClick={() => deleteHabit.mutate(habit.id)}
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive ml-1"
+                                        {/* 7-day mini dots */}
+                                        <div className="hidden sm:flex gap-1 items-center shrink-0">
+                                            {last7Days.map((date, i) => {
+                                                const isDone = isCompletedOnDate(habit, date);
+                                                const isToday = date.toDateString() === new Date().toDateString();
+                                                return (
+                                                    <div
+                                                        key={i}
+                                                        className={cn(
+                                                            "w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-medium border transition-all",
+                                                            isDone ? "bg-green-500/80 border-green-500 text-white" :
+                                                                isToday ? "border-primary/50 bg-primary/10 text-foreground" :
+                                                                    "border-border bg-secondary/30 text-muted-foreground"
+                                                        )}
+                                                        title={date.toDateString()}
+                                                    >
+                                                        {date.getDate()}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex items-center gap-0.5 shrink-0">
+                                            <Button
+                                                variant="ghost" size="icon"
+                                                className="h-7 w-7 text-muted-foreground hover:text-yellow-400"
+                                                onClick={() => handleGetTips(habit)}
+                                                disabled={loadingTips}
+                                                title="AI Tips"
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                <Lightbulb className="w-3.5 h-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost" size="icon"
+                                                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                onClick={() => setEditingHabit({ ...habit })}
+                                                title="Edit"
+                                            >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost" size="icon"
+                                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                onClick={() => deleteHabit.mutate(habit.id)}
+                                                title="Delete"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
                                             </Button>
                                         </div>
                                     </div>
@@ -275,6 +483,45 @@ export default function HabitsPage() {
                         })
                     )}
                 </div>
+
+                {/* ===== EDIT HABIT DIALOG ===== */}
+                <Dialog open={!!editingHabit} onOpenChange={(open) => !open && setEditingHabit(null)}>
+                    <DialogContent className="w-[95vw] max-w-md rounded-2xl sm:rounded-xl">
+                        <DialogHeader><DialogTitle>Edit Habit</DialogTitle></DialogHeader>
+                        {editingHabit && (
+                            <div className="space-y-4 pt-4">
+                                <Input
+                                    placeholder="Habit name"
+                                    value={editingHabit.habit_name}
+                                    onChange={(e) => setEditingHabit({ ...editingHabit, habit_name: e.target.value })}
+                                />
+                                <div>
+                                    <label className="text-xs font-medium text-muted-foreground mb-2 block">Category</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {HABIT_CATEGORIES.map(c => (
+                                            <button
+                                                key={c.value}
+                                                onClick={() => setEditingHabit({ ...editingHabit, category: c.value })}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                                                    editingHabit.category === c.value
+                                                        ? "bg-primary text-primary-foreground border-primary"
+                                                        : "bg-secondary/50 border-border hover:border-primary/30"
+                                                )}
+                                            >
+                                                {c.emoji} {c.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <Button onClick={handleEditHabit} className="w-full" disabled={updateHabit.isPending}>
+                                    {updateHabit.isPending ? "Saving..." : "Save Changes"}
+                                </Button>
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
             </motion.div>
         </AppLayout>
     );

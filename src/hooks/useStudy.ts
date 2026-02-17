@@ -54,34 +54,12 @@ export function useStudy() {
     });
 
     const updateProgress = useMutation({
-        mutationFn: async ({ id, progress_percentage, mastery_rating }: { id: string; progress_percentage: number, mastery_rating?: number }) => {
+        mutationFn: async ({ id, progress_percentage }: { id: string; progress_percentage: number }) => {
             const status = progress_percentage >= 100 ? "completed" : progress_percentage > 0 ? "in-progress" : "not-started";
-
-            // SRS Logic
-            let reviewDue = null;
-            let mastery = undefined;
-
-            if (mastery_rating !== undefined) {
-                mastery = mastery_rating; // 1 (Hard) to 5 (Easy)
-                const daysToAdd = mastery === 1 ? 1 : mastery === 2 ? 3 : mastery === 3 ? 7 : mastery === 4 ? 14 : 30;
-                const date = new Date();
-                date.setDate(date.getDate() + daysToAdd);
-                reviewDue = date.toISOString();
-            }
-
-            // Construct SQL dynamically based on whether SRS data is provided
-            let sql = "UPDATE study_chapters SET progress_percentage = ?, status = ?, last_studied_at = ?";
-            const args: any[] = [Math.min(100, Math.max(0, progress_percentage)), status, new Date().toISOString()];
-
-            if (reviewDue) {
-                sql += ", review_due_at = ?, mastery_level = ?";
-                args.push(reviewDue, mastery);
-            }
-
-            sql += " WHERE id = ?";
-            args.push(id);
-
-            await db.execute({ sql, args });
+            await db.execute({
+                sql: "UPDATE study_chapters SET progress_percentage = ?, status = ?, last_studied_at = ? WHERE id = ?",
+                args: [Math.min(100, Math.max(0, progress_percentage)), status, new Date().toISOString(), id],
+            });
         },
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ["study_chapters"] }),
     });

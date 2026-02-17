@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { SEO } from "@/components/seo/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Wallet, TrendingUp, TrendingDown, Trash2, ChevronLeft, ChevronRight, Clock, X, Calendar as CalendarIcon, Pencil, PiggyBank, Target, Download, Star, ChevronDown } from "lucide-react";
+import { Plus, Wallet, TrendingUp, TrendingDown, Trash2, ChevronLeft, ChevronRight, Clock, X, Calendar as CalendarIcon, Pencil, PiggyBank, Target, Download, Star } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -432,37 +432,33 @@ export default function FinancePage() {
                     </div>
 
                     {/* Single-row controls */}
-                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1">
+                    <div className="top-toolbar mb-4">
 
                         {/* Default / Special dropdown */}
-                        <div className="relative">
-                            <select
-                                value={financeViewMode}
-                                onChange={(e) => setFinanceViewMode(e.target.value as typeof financeViewMode)}
-                                className="appearance-none bg-secondary/50 border border-border rounded-lg px-3 pr-8 py-1.5 text-xs sm:text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
-                            >
-                                <option value="default">Default</option>
-                                <option value="special">Special</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                        </div>
+                        <Select value={financeViewMode} onValueChange={(v) => setFinanceViewMode(v as typeof financeViewMode)}>
+                            <SelectTrigger className="w-auto min-w-[90px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="default">Default</SelectItem>
+                                <SelectItem value="special">Special</SelectItem>
+                            </SelectContent>
+                        </Select>
 
                         {/* Period dropdown */}
-                        <div className="relative">
-                            <select
-                                value={viewMode}
-                                onChange={(e) => setViewMode(e.target.value as typeof viewMode)}
-                                className="appearance-none bg-secondary/50 border border-border rounded-lg px-3 pr-8 py-1.5 text-xs sm:text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
-                            >
-                                <option value="daily">Daily</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="monthly">Monthly</option>
-                                <option value="yearly">Yearly</option>
-                                <option value="custom">Custom</option>
-                                <option value="all">All Time</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                        </div>
+                        <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
+                            <SelectTrigger className="w-auto min-w-[90px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="yearly">Yearly</SelectItem>
+                                <SelectItem value="custom">Custom</SelectItem>
+                                <SelectItem value="all">All Time</SelectItem>
+                            </SelectContent>
+                        </Select>
 
                         {/* Date Controls */}
                         {viewMode === "daily" && (
