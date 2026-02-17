@@ -19,6 +19,13 @@ export function useTheme() {
     root.classList.remove("light", "dark");
     root.classList.add(theme);
     localStorage.setItem("lifeos-theme", theme);
+
+    // Update status bar color to match current theme
+    const themeColor = theme === "dark" ? "#0A0E1A" : "#E8F2F8";
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute("content", themeColor);
+    }
   }, [theme]);
 
   const toggleTheme = () => {

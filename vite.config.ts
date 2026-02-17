@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => ({
         name: "LifeOS - Personal Command Center",
         short_name: "LifeOS",
         description: "Your AI-powered personal productivity and life management system",
-        theme_color: "#00D4AA",
+        theme_color: "#0A0E1A",
         background_color: "#0A0E1A",
         display: "standalone",
         orientation: "portrait",

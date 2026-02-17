@@ -52,9 +52,9 @@ export function SEO({
             {image && <meta property="twitter:image" content={image} />}
 
             {/* Theme & Mobile */}
-            <meta name="theme-color" content="#000000" />
+            <meta name="theme-color" content={document.documentElement.classList.contains("dark") ? "#0A0E1A" : "#E8F2F8"} />
             <meta name="apple-mobile-web-app-capable" content="yes" />
-            <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+            <meta name="apple-mobile-web-app-status-bar-style" content={document.documentElement.classList.contains("dark") ? "black-translucent" : "default"} />
         </Helmet>
     );
 }
