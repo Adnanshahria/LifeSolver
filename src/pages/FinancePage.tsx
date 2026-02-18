@@ -433,14 +433,19 @@ export default function FinancePage() {
                 className="space-y-6"
             >
                 {/* Header */}
-                <div className="flex items-center gap-4">
-                    <div className="hidden md:flex items-center gap-3 shrink-0">
-                        <h1 className="text-3xl font-bold">Finance</h1>
-                        <p className="text-muted-foreground text-sm">Track your income and expenses</p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                    <div className="hidden md:block">
+                        <div className="flex items-center gap-3 mb-1">
+                            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+                                <Wallet className="w-6 h-6 text-primary" />
+                            </div>
+                            <h1 className="text-3xl font-bold font-display tracking-tight">Finance</h1>
+                        </div>
+                        <p className="text-sm text-muted-foreground ml-14">Track your income and expenses</p>
                     </div>
 
-                    {/* Single-row controls - Left aligned on desktop for Finance Page */}
-                    <div className="top-toolbar">
+                    {/* Single-row controls - Top Toolbar */}
+                    <div className="top-toolbar w-full sm:w-auto">
 
                         {/* Default / Special dropdown */}
                         <Select value={financeViewMode} onValueChange={(v) => setFinanceViewMode(v as typeof financeViewMode)}>

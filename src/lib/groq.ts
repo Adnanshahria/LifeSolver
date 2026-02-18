@@ -66,8 +66,8 @@ If the user wants to perform an action with ALL required info, return:
 For ADD_EXPENSE/ADD_INCOME, data must include: amount (number), category (string), description (optional), date (optional YYYY-MM-DD format).
 For EDIT_EXPENSE/EDIT_INCOME, data must include: id (string), and any fields to update: amount, category, description, date.
 
-For COMPLETE_HABIT, data must include: name (habit name) or id (string), and optionally date (YYYY-MM-DD) for past completion.
-For DELETE_HABIT, use name: "all" to delete all habits (e.g. if user says "delete them all" or "delete everything").
+For COMPLETE_HABIT, data must include: habit_name (habit name). Use habit_name: "all" to complete ALL habits at once (e.g. "tick all habits", "complete everything", "mark them all done"). Optionally include date (YYYY-MM-DD) for past completion.
+For DELETE_HABIT, data must include: habit_name. Use habit_name: "all" to delete all habits (e.g. "delete them all", "delete everything").
 
 Available actions:
 TASKS: ADD_TASK, UPDATE_TASK, DELETE_TASK, COMPLETE_TASK

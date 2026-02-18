@@ -470,20 +470,19 @@ export default function TasksPage() {
                 className="space-y-4 sm:space-y-6"
             >
                 {/* Header */}
-                <div className="flex items-center gap-4">
-                    <div className="hidden md:flex items-center gap-3 shrink-0">
-                        <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
-                            <CheckSquare className="w-6 h-6 text-primary" />
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                    <div className="hidden md:block">
+                        <div className="flex items-center gap-3 mb-1">
+                            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+                                <CheckSquare className="w-6 h-6 text-primary" />
+                            </div>
+                            <h1 className="text-3xl font-bold font-display tracking-tight">Tasks</h1>
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-                            <p className="text-sm text-muted-foreground">Your central productivity hub</p>
-                        </div>
+                        <p className="text-sm text-muted-foreground ml-14">Your central productivity hub</p>
                     </div>
 
-                    {/* Single-row controls */}
                     {/* Single-row controls - Top Toolbar */}
-                    <div className="top-toolbar">
+                    <div className="top-toolbar w-full sm:w-auto">
 
                         {/* Tab Dropdown */}
                         <Select value={tabView} onValueChange={(v) => setTabView(v as typeof tabView)}>

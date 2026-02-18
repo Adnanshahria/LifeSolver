@@ -142,13 +142,18 @@ export default function StudyPage() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-6">
 
                 {/* ===== SINGLE-ROW CONTROLS ===== */}
-                <div className="flex items-center gap-4">
-                    <div className="hidden md:flex items-center gap-3 shrink-0">
-                        <h1 className="text-3xl font-bold">Study</h1>
-                        <p className="text-muted-foreground text-sm">Track your learning progress</p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                    <div className="hidden md:block">
+                        <div className="flex items-center gap-3 mb-1">
+                            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+                                <GraduationCap className="w-6 h-6 text-primary" />
+                            </div>
+                            <h1 className="text-3xl font-bold font-display tracking-tight">Study</h1>
+                        </div>
+                        <p className="text-sm text-muted-foreground ml-14">Track your learning progress</p>
                     </div>
 
-                    <div className="top-toolbar">
+                    <div className="top-toolbar w-full sm:w-auto">
                         {/* Subject Filter */}
                         <Select value={activeSubject} onValueChange={setActiveSubject}>
                             <SelectTrigger className="w-auto min-w-[120px]">

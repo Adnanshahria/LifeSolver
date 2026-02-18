@@ -263,8 +263,22 @@ export function AIChatInterface() {
                     await addHabit.mutateAsync({ name: String(data.habit_name || data.name || ""), category: (data.category ? String(data.category) : "general") as import("@/hooks/useHabits").HabitCategory });
                     break;
                 case "COMPLETE_HABIT":
-                    const habitToComplete = habits?.find(h => h.habit_name.toLowerCase().includes((data.habit_name as string || "").toLowerCase()));
-                    if (habitToComplete) await completeHabit.mutateAsync({ habit: habitToComplete });
+                    const completeTarget = (data.habit_name as string || data.name as string || "").toLowerCase();
+                    if (completeTarget === "all" || completeTarget === "every habit" || completeTarget === "everything") {
+                        // Complete ALL habits for today
+                        const todayStr = new Date().toISOString().split("T")[0];
+                        if (habits && habits.length > 0) {
+                            for (const h of habits) {
+                                const alreadyDone = h.last_completed_date?.split("T")[0] === todayStr;
+                                if (!alreadyDone) {
+                                    await completeHabit.mutateAsync({ habit: h });
+                                }
+                            }
+                        }
+                    } else {
+                        const habitToComplete = habits?.find(h => h.habit_name.toLowerCase().includes(completeTarget));
+                        if (habitToComplete) await completeHabit.mutateAsync({ habit: habitToComplete });
+                    }
                     break;
                 case "DELETE_HABIT":
                     const habitName = (data.habit_name as string || "").toLowerCase();

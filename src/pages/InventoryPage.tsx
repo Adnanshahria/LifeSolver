@@ -215,13 +215,18 @@ export default function InventoryPage() {
                 {/* Header & Stats */}
                 <div className="flex flex-col gap-3 sm:gap-4">
                     {/* Single-row controls */}
-                    <div className="flex items-center gap-4">
-                        <div className="hidden md:flex items-center gap-3 shrink-0">
-                            <h1 className="text-3xl font-bold">Inventory</h1>
-                            <p className="text-muted-foreground text-sm">Manage your assets and belongings</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                        <div className="hidden md:block">
+                            <div className="flex items-center gap-3 mb-1">
+                                <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+                                    <Package className="w-6 h-6 text-primary" />
+                                </div>
+                                <h1 className="text-3xl font-bold font-display tracking-tight">Inventory</h1>
+                            </div>
+                            <p className="text-sm text-muted-foreground ml-14">Manage your assets and belongings</p>
                         </div>
 
-                        <div className="top-toolbar">
+                        <div className="top-toolbar w-full sm:w-auto">
                             {/* View Toggle */}
                             <div className="flex bg-secondary rounded-lg p-0.5 shrink-0">
                                 <button
