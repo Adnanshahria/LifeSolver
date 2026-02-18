@@ -21,14 +21,39 @@ import RegisterPage from "./pages/RegisterPage";
 import WelcomePage from "./pages/WelcomePage";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { AnimatedPage } from "./components/layout/AnimatedPage";
-import { initDatabase } from "./lib/turso";
 import { AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router-dom";
+import { db } from "@/Database/client";
+import { initStudyTable } from "@/Database/schemas/study";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
+
+  useEffect(() => {
+    const migrate = async () => {
+      // Migration: Add parent_id to study_common_presets
+      try {
+        await db.execute("ALTER TABLE study_common_presets ADD COLUMN parent_id TEXT REFERENCES study_common_presets(id) ON DELETE CASCADE");
+        console.log("Migration: Added parent_id to study_common_presets");
+      } catch (e) {
+        // Ignore if column exists
+      }
+
+      // Migration: Add preset_type to study_common_presets
+      try {
+        await db.execute({ sql: "ALTER TABLE study_common_presets ADD COLUMN preset_type TEXT DEFAULT 'chapter'", args: [] });
+        console.log("Migrated: Added preset_type to study_common_presets");
+      } catch (e) {
+        // Ignore
+      }
+
+      // Ensure common presets table exists (initStudyTable covers this but safe to retry/ensure)
+      await initStudyTable();
+    };
+    migrate();
+  }, []);
 
   return (
     <AIProvider>
@@ -74,7 +99,7 @@ const App = () => {
     }
 
     // Initialize database tables
-    initDatabase().catch(console.error);
+    // initDatabase().catch(console.error); // Deprecated/Removed
   }, []);
 
   return (

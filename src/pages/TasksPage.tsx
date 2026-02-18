@@ -1346,7 +1346,7 @@ export default function TasksPage() {
                             <label className="text-xs text-muted-foreground">Subject</label>
                             <div className="relative">
                                 <select
-                                    className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                     value={importSubjectId}
                                     onChange={(e) => {
                                         setImportSubjectId(e.target.value);
@@ -1358,7 +1358,6 @@ export default function TasksPage() {
                                         <option key={s.id} value={s.id}>{s.name}</option>
                                     ))}
                                 </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
                             </div>
                         </div>
 
@@ -1368,7 +1367,7 @@ export default function TasksPage() {
                                 <label className="text-xs text-muted-foreground">Chapter</label>
                                 <div className="relative">
                                     <select
-                                        className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                         value={importChapterId}
                                         onChange={(e) => setImportChapterId(e.target.value)}
                                     >
@@ -1377,7 +1376,6 @@ export default function TasksPage() {
                                             <option key={c.id} value={c.id}>{c.name}</option>
                                         ))}
                                     </select>
-                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
                                 </div>
                             </div>
                         )}
@@ -1390,32 +1388,27 @@ export default function TasksPage() {
                                     {(partsByChapter[importChapterId] || []).length === 0 ? (
                                         <p className="text-sm text-muted-foreground p-2 text-center">No parts found.</p>
                                     ) : (
-                                        (partsByChapter[importChapterId] || []).map(part => (
-                                            <button
+                                        (partsByChapter[importChapterId] || []).filter(p => !p.parent_id).map(part => (
+                                            <StudyPartSelectItem
                                                 key={part.id}
-                                                className="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-secondary/50 flex items-center justify-between group"
-                                                onClick={() => {
+                                                part={part}
+                                                allParts={partsByChapter[importChapterId] || []}
+                                                onSelect={(p) => {
                                                     setNewTask({
                                                         ...defaultNewTask,
-                                                        title: part.name,
+                                                        title: p.name,
                                                         context_type: "study",
-                                                        context_id: importChapterId,
-                                                        estimated_duration: String(part.estimated_minutes),
-                                                        start_time: part.scheduled_time || "",
-                                                        due_date: part.scheduled_date ? new Date(part.scheduled_date).toISOString() : "",
+                                                        context_id: importChapterId, // Link to chapter for context
+                                                        estimated_duration: String(p.estimated_minutes),
+                                                        start_time: p.scheduled_time || "",
+                                                        due_date: p.scheduled_date ? new Date(p.scheduled_date).toISOString() : "",
                                                     });
                                                     setImportStudyOpen(false);
                                                     setImportSubjectId("");
                                                     setImportChapterId("");
                                                     setIsDialogOpen(true);
                                                 }}
-                                            >
-                                                <span>{part.name}</span>
-                                                <div className="flex items-center gap-2 opacity-60 text-xs">
-                                                    <span>{part.estimated_minutes}m</span>
-                                                    <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100" />
-                                                </div>
-                                            </button>
+                                            />
                                         ))
                                     )}
                                 </div>
@@ -1425,5 +1418,47 @@ export default function TasksPage() {
                 </DialogContent>
             </Dialog>
         </AppLayout>
+    );
+}
+
+function StudyPartSelectItem({
+    part,
+    allParts,
+    level = 0,
+    onSelect
+}: {
+    part: { id: string; name: string; estimated_minutes: number; scheduled_time?: string; scheduled_date?: string; parent_id?: string | null };
+    allParts: any[];
+    level?: number;
+    onSelect: (part: any) => void;
+}) {
+    const children = allParts.filter(p => p.parent_id === part.id);
+
+    return (
+        <>
+            <button
+                className="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-secondary/50 flex items-center justify-between group transition-colors"
+                style={{ paddingLeft: `${Math.max(0.75, level * 1 + 0.75)}rem` }}
+                onClick={() => onSelect(part)}
+            >
+                <div className="flex items-center gap-2">
+                    {level > 0 && <div className="w-1.5 h-1.5 rounded-full bg-border" />}
+                    <span>{part.name}</span>
+                </div>
+                <div className="flex items-center gap-2 opacity-60 text-xs">
+                    <span>{part.estimated_minutes}m</span>
+                    <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+                </div>
+            </button>
+            {children.map(child => (
+                <StudyPartSelectItem
+                    key={child.id}
+                    part={child}
+                    allParts={allParts}
+                    level={level + 1}
+                    onSelect={onSelect}
+                />
+            ))}
+        </>
     );
 }

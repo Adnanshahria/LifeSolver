@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus, GraduationCap, Trash2, Search, BookOpen, TrendingUp,
     Award, Brain, ChevronRight, Pencil, Check, X,
-    Clock, Calendar, BookMarked, Layers, FolderPlus, FilePlus
+    Clock, Calendar, BookMarked, Layers, FolderPlus, FilePlus, Settings
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription,
@@ -23,7 +24,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { SEO } from "@/components/seo/SEO";
 import { StudyAnalytics } from "@/components/study/StudyAnalytics";
-import { useStudy, StudySubject, StudyChapter, StudyPart } from "@/hooks/useStudy";
+import { useStudy, StudySubject, StudyChapter, StudyPart, StudyCommonPreset } from "@/hooks/useStudy";
 import { useToast } from "@/hooks/use-toast";
 import { useAI } from "@/contexts/AIContext";
 
@@ -43,7 +44,7 @@ const getColor = (i: number) => SUBJECT_COLORS[i % SUBJECT_COLORS.length];
 // ─── Status helpers ──────────────────────────────────────────────────
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string; next: string }> = {
     "not-started": { label: "Todo", color: "text-muted-foreground", bg: "bg-secondary/60", next: "in-progress" },
-    "in-progress": { label: "Active", color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/15", next: "completed" },
+    "in-progress": { label: "50%", color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/15", next: "completed" },
     "completed": { label: "Done", color: "text-green-500 dark:text-green-400", bg: "bg-green-500/15", next: "not-started" },
 };
 
@@ -65,6 +66,17 @@ export default function StudyPage() {
     const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
     const [filterSubject, setFilterSubject] = useState<string>("all");
 
+    // Presets state
+    const [managePresetsOpen, setManagePresetsOpen] = useState(false);
+    const [selectedPresetSubjectId, setSelectedPresetSubjectId] = useState<string>("");
+    const [newPresetName, setNewPresetName] = useState("");
+    const [newPresetMinutes, setNewPresetMinutes] = useState(30);
+    const [newPresetParentId, setNewPresetParentId] = useState<string | null>(null);
+    const [activePresetTab, setActivePresetTab] = useState<"chapter" | "part">("chapter");
+    const [selectedTargetChapterId, setSelectedTargetChapterId] = useState<string>("");
+    const [selectedTargetPartId, setSelectedTargetPartId] = useState<string>("");
+    const [selectedPresetIds, setSelectedPresetIds] = useState<Set<string>>(new Set());
+
     // Dialog states
     const [addSubjectOpen, setAddSubjectOpen] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState("");
@@ -75,6 +87,7 @@ export default function StudyPage() {
 
     const [addPartOpen, setAddPartOpen] = useState(false);
     const [addPartChapterId, setAddPartChapterId] = useState("");
+    const [addPartParentId, setAddPartParentId] = useState<string | null>(null);
     const [newPartName, setNewPartName] = useState("");
     const [newPartMinutes, setNewPartMinutes] = useState(30);
     const [newPartDate, setNewPartDate] = useState("");
@@ -89,7 +102,7 @@ export default function StudyPage() {
 
     const [editPartOpen, setEditPartOpen] = useState(false);
     const [editPartId, setEditPartId] = useState("");
-    const [editPartData, setEditPartData] = useState<{ name: string; minutes: number; date: string }>({ name: "", minutes: 30, date: "" });
+    const [editPartData, setEditPartData] = useState({ id: "", name: "", minutes: 30, date: "" });
 
     // Initially expand all subjects (once loaded)
     useEffect(() => {
@@ -161,10 +174,12 @@ export default function StudyPage() {
             name: newPartName.trim(),
             estimatedMinutes: newPartMinutes,
             scheduledDate: newPartDate || undefined,
+            parentId: addPartParentId || undefined,
         });
         setNewPartName("");
         setNewPartMinutes(30);
         setNewPartDate("");
+        setAddPartParentId(null);
         setAddPartOpen(false);
         setExpandedChapters(p => new Set(p).add(addPartChapterId));
     };
@@ -199,8 +214,9 @@ export default function StudyPage() {
         setAddChapterOpen(true);
     };
 
-    const openAddPart = (chapterId: string) => {
+    const openAddPart = (chapterId: string, parentId: string | null = null) => {
         setAddPartChapterId(chapterId);
+        setAddPartParentId(parentId);
         setNewPartName("");
         setNewPartMinutes(30);
         setNewPartDate("");
@@ -222,6 +238,7 @@ export default function StudyPage() {
     const openEditPart = (part: StudyPart) => {
         setEditPartId(part.id);
         setEditPartData({
+            id: part.id,
             name: part.name,
             minutes: part.estimated_minutes,
             date: part.scheduled_date || "",
@@ -276,6 +293,16 @@ export default function StudyPage() {
                                 className="pl-8 h-8 text-xs sm:text-sm"
                             />
                         </div>
+
+                        {/* Manage Presets button */}
+                        <Button variant="outline" size="icon" className="h-8 w-8 sm:w-auto sm:px-3 sm:gap-1.5" onClick={() => {
+                            if (filterSubject !== "all") setSelectedPresetSubjectId(filterSubject);
+                            else if (study.subjects.length > 0) setSelectedPresetSubjectId(study.subjects[0].id);
+                            setManagePresetsOpen(true);
+                        }} title="Manage Common Presets">
+                            <Settings className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Presets</span>
+                        </Button>
 
                         {/* Add Subject button */}
                         <Button size="icon" className="h-8 w-8 sm:w-auto sm:px-3 sm:gap-1.5 shadow-lg shadow-primary/20" onClick={() => setAddSubjectOpen(true)}>
@@ -345,9 +372,36 @@ export default function StudyPage() {
                         filteredSubjects.map((subject, si) => {
                             const color = getColor(subject.color_index ?? si);
                             const isExpanded = expandedSubjects.has(subject.id);
-                            const progress = study.subjectProgress[subject.id] || 0;
                             const subChapters = study.chaptersBySubject[subject.id] || [];
                             const totalSubParts = subChapters.flatMap(c => study.partsByChapter[c.id] || []);
+
+                            // Calculate Duration & Progress for Subject
+                            let subjectTotalMinutes = 0;
+                            let subjectCompletedMinutes = 0;
+
+                            subChapters.forEach(ch => {
+                                const chParts = study.partsByChapter[ch.id] || [];
+                                chParts.forEach(p => {
+                                    subjectTotalMinutes += p.estimated_minutes;
+                                    if (p.status === "completed") {
+                                        subjectCompletedMinutes += p.estimated_minutes;
+                                    } else if (p.status === "in-progress") {
+                                        subjectCompletedMinutes += (p.estimated_minutes * 0.5);
+                                    }
+                                });
+                            });
+
+                            const subjectRemainingMinutes = subjectTotalMinutes - subjectCompletedMinutes;
+                            const progress = subjectTotalMinutes > 0 ? Math.round((subjectCompletedMinutes / subjectTotalMinutes) * 100) : 0;
+
+                            const formatDuration = (mins: number) => {
+                                const rounded = Math.ceil(mins);
+                                if (rounded === 0) return "0m";
+                                const h = Math.floor(rounded / 60);
+                                const m = rounded % 60;
+                                if (h > 0) return `${h}h${m > 0 ? ` ${m}m` : ""}`;
+                                return `${m}m`;
+                            };
 
                             return (
                                 <motion.div
@@ -384,7 +438,24 @@ export default function StudyPage() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                                            <div className="flex items-center gap-1.5 sm:gap-4 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                                                {/* Subject Duration & Progress Bar */}
+                                                <div className="flex flex-col items-end gap-1 min-w-[80px] sm:min-w-[100px]">
+                                                    <div className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                                                        {subjectRemainingMinutes > 0 ? (
+                                                            <span>{formatDuration(subjectRemainingMinutes)} left</span>
+                                                        ) : (
+                                                            <span className="text-green-600 dark:text-green-400">Complete!</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="h-1.5 w-full bg-background/40 rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-500 ${color.progressBg}`}
+                                                            style={{ width: `${progress}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+
                                                 {/* Progress pill */}
                                                 <div className={`text-xs sm:text-sm font-bold px-2.5 py-1 rounded-full ${progress >= 100 ? "bg-green-500/20 text-green-500 dark:text-green-400" :
                                                     progress > 50 ? "bg-blue-500/20 text-blue-500 dark:text-blue-400" :
@@ -394,44 +465,50 @@ export default function StudyPage() {
                                                     {progress}%
                                                 </div>
 
-                                                {/* Add chapter */}
-                                                <Button
-                                                    size="icon" variant="ghost"
-                                                    className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                                    title="Add chapter"
-                                                    onClick={() => openAddChapter(subject.id)}
-                                                >
-                                                    <FolderPlus className="w-3.5 h-3.5" />
-                                                </Button>
+                                                <div className="flex items-center gap-1">
+                                                    {/* Add chapter */}
+                                                    <Button
+                                                        size="icon" variant="ghost"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                        title="Add chapter"
+                                                        onClick={() => openAddChapter(subject.id)}
+                                                    >
+                                                        <FolderPlus className="w-3.5 h-3.5" />
+                                                    </Button>
 
-                                                {/* Edit subject */}
-                                                <Button
-                                                    size="icon" variant="ghost"
-                                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                                    onClick={() => openEditSubject(subject)}
-                                                >
-                                                    <Pencil className="w-3 h-3" />
-                                                </Button>
+                                                    {/* Manage Presets */}
+                                                    <Button
+                                                        size="icon" variant="ghost"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                        title="Manage Common Presets"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedPresetSubjectId(subject.id);
+                                                            setManagePresetsOpen(true);
+                                                        }}
+                                                    >
+                                                        <Settings className="w-3.5 h-3.5" />
+                                                    </Button>
 
-                                                {/* Delete subject */}
-                                                <Button
-                                                    size="icon" variant="ghost"
-                                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                                    onClick={() => study.deleteSubject.mutate(subject.id)}
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </Button>
+                                                    {/* Edit subject */}
+                                                    <Button
+                                                        size="icon" variant="ghost"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                                        onClick={() => openEditSubject(subject)}
+                                                    >
+                                                        <Pencil className="w-3 h-3" />
+                                                    </Button>
+
+                                                    {/* Delete subject */}
+                                                    <Button
+                                                        size="icon" variant="ghost"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                        onClick={() => study.deleteSubject.mutate(subject.id)}
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                        </div>
-
-                                        {/* Subject progress bar */}
-                                        <div className="mt-2 h-1.5 rounded-full bg-background/30 overflow-hidden">
-                                            <motion.div
-                                                className={`h-full rounded-full ${color.progressBg}`}
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${progress}%` }}
-                                                transition={{ duration: 0.6, ease: "easeOut" }}
-                                            />
                                         </div>
                                     </div>
 
@@ -458,9 +535,23 @@ export default function StudyPage() {
                                                         </div>
                                                     ) : (
                                                         subChapters.map((chapter, ci) => {
-                                                            const chProgress = study.chapterProgress[chapter.id] || 0;
                                                             const isChExpanded = expandedChapters.has(chapter.id);
                                                             const chParts = study.partsByChapter[chapter.id] || [];
+
+                                                            // Calculate Duration & Progress for Chapter
+                                                            let chTotalMinutes = 0;
+                                                            let chCompletedMinutes = 0;
+                                                            chParts.forEach(p => {
+                                                                chTotalMinutes += p.estimated_minutes;
+                                                                if (p.status === "completed") {
+                                                                    chCompletedMinutes += p.estimated_minutes;
+                                                                } else if (p.status === "in-progress") {
+                                                                    chCompletedMinutes += (p.estimated_minutes * 0.5);
+                                                                }
+                                                            });
+
+                                                            const chRemainingMinutes = chTotalMinutes - chCompletedMinutes;
+                                                            const chProgress = chTotalMinutes > 0 ? Math.round((chCompletedMinutes / chTotalMinutes) * 100) : 0;
 
                                                             return (
                                                                 <motion.div
@@ -484,43 +575,62 @@ export default function StudyPage() {
 
                                                                         <span className="font-medium text-xs sm:text-sm flex-1 truncate">{chapter.name}</span>
 
-                                                                        <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                                                                            {/* Chapter progress */}
-                                                                            <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 font-mono ${chProgress >= 100 ? "bg-green-500/15 text-green-500 dark:text-green-400" :
-                                                                                chProgress > 0 ? "bg-blue-500/15 text-blue-500 dark:text-blue-400" :
-                                                                                    ""
-                                                                                }`}>
-                                                                                {chProgress}%
-                                                                            </Badge>
-                                                                            <span className="text-[10px] text-muted-foreground ml-1">{chParts.length}p</span>
+                                                                        <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0" onClick={e => e.stopPropagation()}>
 
-                                                                            {/* Add part */}
-                                                                            <Button
-                                                                                size="icon" variant="ghost"
-                                                                                className="h-6 w-6 text-muted-foreground hover:text-primary"
-                                                                                title="Add part"
-                                                                                onClick={() => openAddPart(chapter.id)}
-                                                                            >
-                                                                                <FilePlus className="w-3 h-3" />
-                                                                            </Button>
+                                                                            {/* Chapter Duration & Progress */}
+                                                                            <div className="flex flex-col items-end gap-0.5 min-w-[60px] sm:min-w-[80px]">
+                                                                                <div className="text-[10px] font-medium text-muted-foreground">
+                                                                                    {chRemainingMinutes > 0 ? (
+                                                                                        <span>{formatDuration(chRemainingMinutes)}</span>
+                                                                                    ) : (
+                                                                                        <span className="text-green-500">Done</span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+                                                                                    <div
+                                                                                        className={`h-full rounded-full transition-all duration-500 ${chProgress >= 100 ? "bg-green-500" : "bg-primary"}`}
+                                                                                        style={{ width: `${chProgress}%` }}
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
 
-                                                                            {/* Edit chapter */}
-                                                                            <Button
-                                                                                size="icon" variant="ghost"
-                                                                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                                                                                onClick={() => openEditChapter(chapter)}
-                                                                            >
-                                                                                <Pencil className="w-2.5 h-2.5" />
-                                                                            </Button>
+                                                                            <div className="flex items-center gap-1">
+                                                                                <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 font-mono ${chProgress >= 100 ? "bg-green-500/15 text-green-500 dark:text-green-400" :
+                                                                                    chProgress > 0 ? "bg-blue-500/15 text-blue-500 dark:text-blue-400" :
+                                                                                        ""
+                                                                                    }`}>
+                                                                                    {chProgress}%
+                                                                                </Badge>
+                                                                                <span className="text-[10px] text-muted-foreground ml-1 w-8 text-right">{chParts.length}p</span>
 
-                                                                            {/* Delete chapter */}
-                                                                            <Button
-                                                                                size="icon" variant="ghost"
-                                                                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                                                                onClick={() => study.deleteChapter.mutate(chapter.id)}
-                                                                            >
-                                                                                <Trash2 className="w-3 h-3" />
-                                                                            </Button>
+                                                                                {/* Actions */}
+                                                                                <div className="flex items-center ml-1">
+                                                                                    <Button
+                                                                                        size="icon" variant="ghost"
+                                                                                        className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                                                        title="Add part"
+                                                                                        onClick={() => openAddPart(chapter.id)}
+                                                                                    >
+                                                                                        <FilePlus className="w-3 h-3" />
+                                                                                    </Button>
+
+                                                                                    <Button
+                                                                                        size="icon" variant="ghost"
+                                                                                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                                                                        onClick={() => openEditChapter(chapter)}
+                                                                                    >
+                                                                                        <Pencil className="w-2.5 h-2.5" />
+                                                                                    </Button>
+
+                                                                                    <Button
+                                                                                        size="icon" variant="ghost"
+                                                                                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                                                                        onClick={() => study.deleteChapter.mutate(chapter.id)}
+                                                                                    >
+                                                                                        <Trash2 className="w-3 h-3" />
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
 
@@ -535,29 +645,21 @@ export default function StudyPage() {
                                                                                 className="overflow-hidden"
                                                                             >
                                                                                 <div className="border-t border-border/30 divide-y divide-border/20">
-                                                                                    {chParts.map((part) => (
+                                                                                    {chParts.filter(p => !p.parent_id).map((part) => (
                                                                                         <PartRow
                                                                                             key={part.id}
                                                                                             part={part}
-                                                                                            onStartEdit={() => openEditPart(part)}
-                                                                                            onToggleStatus={() => study.togglePartStatus.mutate({ id: part.id, currentStatus: part.status })}
-                                                                                            onDelete={() => study.deletePart.mutate(part.id)}
+                                                                                            allParts={chParts}
+                                                                                            onStartEdit={(p) => openEditPart(p)}
+                                                                                            onToggleStatus={(p) => study.togglePartStatus.mutate({ id: p.id, currentStatus: p.status })}
+                                                                                            onDelete={(p) => study.deletePart.mutate(p.id)}
+                                                                                            onAddSubpart={(parentId) => openAddPart(chapter.id, parentId)}
                                                                                         />
                                                                                     ))}
                                                                                 </div>
                                                                             </motion.div>
                                                                         )}
                                                                     </AnimatePresence>
-
-                                                                    {/* Chapter progress bar (thin) */}
-                                                                    <div className="h-1 bg-secondary/30">
-                                                                        <motion.div
-                                                                            className={`h-full ${color.progressBg} opacity-60`}
-                                                                            initial={{ width: 0 }}
-                                                                            animate={{ width: `${chProgress}%` }}
-                                                                            transition={{ duration: 0.5 }}
-                                                                        />
-                                                                    </div>
                                                                 </motion.div>
                                                             );
                                                         })
@@ -779,85 +881,403 @@ export default function StudyPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* ── Manage Presets Dialog ───────────────────────────────── */}
+            <Dialog open={managePresetsOpen} onOpenChange={setManagePresetsOpen}>
+                <DialogContent className="w-[95vw] max-w-lg rounded-2xl sm:rounded-xl h-[80vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Manage Common Presets</DialogTitle>
+                        <DialogDescription>Define standard parts for your subjects. These can be auto-added to new chapters.</DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-hidden flex flex-col gap-4">
+                        {/* Subject Select */}
+                        <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground font-medium">Select Subject</label>
+                            <Select value={selectedPresetSubjectId} onValueChange={setSelectedPresetSubjectId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a subject..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {study.subjects.map(s => (
+                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {selectedPresetSubjectId && (
+                            <>
+                                {/* Tabs */}
+                                <div className="flex gap-2 mb-4 border-b pb-2">
+                                    <button
+                                        className={`pb-1 text-sm font-medium transition-colors ${activePresetTab === "chapter" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                                        onClick={() => { setActivePresetTab("chapter"); setNewPresetParentId(null); }}
+                                    >
+                                        Chapter Defaults
+                                    </button>
+                                    <button
+                                        className={`pb-1 text-sm font-medium transition-colors ${activePresetTab === "part" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                                        onClick={() => { setActivePresetTab("part"); setNewPresetParentId(null); setSelectedPresetIds(new Set()); setSelectedTargetChapterId(""); setSelectedTargetPartId(""); }}
+                                    >
+                                        Sub-Chapters
+                                    </button>
+                                </div>
+
+                                {/* Tab Description & Target Selector */}
+                                <div className="space-y-3 mb-4">
+                                    <p className="text-xs text-muted-foreground">
+                                        {activePresetTab === "chapter"
+                                            ? "These parts are automatically added to every NEW chapter you create."
+                                            : "Select sub-chapters to add to a specific chapter."}
+                                    </p>
+
+                                    {activePresetTab === "part" && (
+                                        <div className="flex items-center gap-2">
+                                            <Select value={selectedTargetChapterId} onValueChange={(v) => { setSelectedTargetChapterId(v); setSelectedTargetPartId(""); }}>
+                                                <SelectTrigger className="h-8 text-xs w-[240px]">
+                                                    <SelectValue placeholder="Select Target Chapter..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {study.chaptersBySubject[selectedPresetSubjectId]?.map(chapter => (
+                                                        <SelectItem key={chapter.id} value={chapter.id}>{chapter.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {selectedTargetChapterId && (
+                                                <Select value={selectedTargetPartId} onValueChange={setSelectedTargetPartId}>
+                                                    <SelectTrigger className="h-8 text-xs w-[240px]">
+                                                        <SelectValue placeholder="Add under part... (Optional)" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="root">-- Add as Root --</SelectItem>
+                                                        <SelectItem value="all-parts">-- Add to ALL Parts --</SelectItem>
+                                                        {study.partsByChapter[selectedTargetChapterId]?.map(part => (
+                                                            <SelectItem key={part.id} value={part.id}>{part.name}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Add New Preset */}
+                                <div className="p-3 bg-secondary/30 rounded-lg space-y-3 border border-border/50">
+                                    <h4 className="text-sm font-medium flex items-center justify-between">
+                                        <span>Create New {activePresetTab === "chapter" ? "Default" : "Sub-Chapter"}</span>
+                                        {newPresetParentId && (
+                                            <Badge variant="secondary" className="text-xs gap-1">
+                                                Child of: {study.commonPresets?.find(p => p.id === newPresetParentId)?.name}
+                                                <X className="w-3 h-3 cursor-pointer hover:text-destructive" onClick={() => setNewPresetParentId(null)} />
+                                            </Badge>
+                                        )}
+                                    </h4>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder={newPresetParentId ? "Sub-preset name..." : "Part name (e.g., Read Chapter)"}
+                                            value={newPresetName}
+                                            onChange={e => setNewPresetName(e.target.value)}
+                                            className="h-8 text-sm"
+                                        />
+                                        <Select value={String(newPresetMinutes)} onValueChange={v => setNewPresetMinutes(Number(v))}>
+                                            <SelectTrigger className="h-8 w-[90px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {TIME_OPTIONS.map(t => <SelectItem key={t} value={String(t)}>{t}m</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <Button size="sm" onClick={() => {
+                                            if (!newPresetName.trim()) return;
+                                            study.addCommonPreset.mutate({
+                                                subjectId: selectedPresetSubjectId,
+                                                name: newPresetName.trim(),
+                                                minutes: newPresetMinutes,
+                                                parentId: newPresetParentId || undefined,
+                                                type: activePresetTab
+                                            });
+                                            setNewPresetName("");
+                                            setNewPresetParentId(null);
+                                        }} disabled={!newPresetName.trim()}>
+                                            <Plus className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Preset List */}
+                                <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1 mt-4">
+                                    <h4 className="text-sm font-medium sticky top-0 bg-background pb-2 z-10 flex items-center justify-between">
+                                        <span>Existing {activePresetTab === "chapter" ? "Defaults" : "Sub-Chapters"}</span>
+                                        <Badge variant="secondary" className="text-[10px] h-5">
+                                            {study.commonPresets?.filter(p => p.subject_id === selectedPresetSubjectId && (p.preset_type === activePresetTab || (!p.preset_type && activePresetTab === "chapter"))).length || 0}
+                                        </Badge>
+                                    </h4>
+                                    {study.commonPresets?.filter(p => p.subject_id === selectedPresetSubjectId && !p.parent_id && (p.preset_type === activePresetTab || (!p.preset_type && activePresetTab === "chapter"))).length === 0 ? (
+                                        <div className="text-center py-8 text-muted-foreground text-sm border-2 border-dashed rounded-lg">
+                                            No {activePresetTab === "chapter" ? "defaults" : "sub-chapters"} defined.
+                                        </div>
+                                    ) : (
+                                        study.commonPresets?.filter(p => p.subject_id === selectedPresetSubjectId && !p.parent_id && (p.preset_type === activePresetTab || (!p.preset_type && activePresetTab === "chapter"))).map(preset => (
+                                            <PresetRow
+                                                key={preset.id}
+                                                preset={preset}
+                                                allPresets={study.commonPresets?.filter(p => p.subject_id === selectedPresetSubjectId && (p.preset_type === activePresetTab || (!p.preset_type && activePresetTab === "chapter"))) || []}
+                                                onDelete={(id) => study.deleteCommonPreset.mutate(id)}
+                                                onAddSubPreset={(id) => setNewPresetParentId(id)}
+                                                selectable={activePresetTab === "part"}
+                                                selectedIds={selectedPresetIds}
+                                                onToggleSelect={(id) => {
+                                                    const newSet = new Set(selectedPresetIds);
+                                                    if (newSet.has(id)) newSet.delete(id);
+                                                    else newSet.add(id);
+                                                    setSelectedPresetIds(newSet);
+                                                }}
+                                            />
+                                        ))
+                                    )}
+                                </div>
+
+                                {/* Actions Footer */}
+                                <div className="pt-2 border-t mt-auto">
+                                    {activePresetTab === "chapter" ? (
+                                        <>
+                                            <Button
+                                                variant="outline"
+                                                className="w-full text-xs"
+                                                onClick={() => {
+                                                    if (confirm("This will add missing DEFAULT presets to ALL existing chapters in this subject. Continue?")) {
+                                                        study.applyPresetsToAllChapters.mutate(selectedPresetSubjectId);
+                                                        toast({ title: "Presets applied!" });
+                                                    }
+                                                }}
+                                                disabled={study.applyPresetsToAllChapters.isPending}
+                                            >
+                                                <FolderPlus className="w-3.5 h-3.5 mr-2" />
+                                                Apply Defaults to All Existing Chapters
+                                            </Button>
+                                            <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                                                New chapters created in this subject will automatically include these parts.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <Button
+                                            className="w-full text-xs"
+                                            onClick={() => {
+                                                if (!selectedTargetChapterId) return;
+                                                study.addPresetsToChapter.mutate({
+                                                    chapterId: selectedTargetChapterId,
+                                                    presetIds: Array.from(selectedPresetIds),
+                                                    targetPartId: selectedTargetPartId === "root" ? undefined : selectedTargetPartId
+                                                });
+                                                toast({ title: "Sub-Chapters added!" });
+                                                setSelectedPresetIds(new Set());
+                                            }}
+                                            disabled={!selectedTargetChapterId || selectedPresetIds.size === 0 || study.addPresetsToChapter.isPending}
+                                        >
+                                            <FolderPlus className="w-3.5 h-3.5 mr-2" />
+                                            Add {Array.from(selectedPresetIds).length} Sub-Chapters to {selectedTargetPartId === "all-parts" ? "All Top-Level Parts" : (selectedTargetPartId && selectedTargetPartId !== "root" ? "Target Part" : "Chapter Root")}
+                                        </Button>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// PART ROW COMPONENT (simplified — no inline editing)
-// ══════════════════════════════════════════════════════════════════════
+function PresetRow({
+    preset,
+    allPresets,
+    level = 0,
+    onDelete,
+    onAddSubPreset,
+    selectable,
+    selectedIds,
+    onToggleSelect
+}: {
+    preset: StudyCommonPreset;
+    allPresets: StudyCommonPreset[];
+    level?: number;
+    onDelete: (id: string) => void;
+    onAddSubPreset: (id: string) => void;
+    selectable?: boolean;
+    selectedIds?: Set<string>;
+    onToggleSelect?: (id: string) => void;
+}) {
+    const children = allPresets.filter(p => p.parent_id === preset.id);
+    const isSelected = selectedIds?.has(preset.id);
+
+    return (
+        <div className="space-y-1">
+            <div
+                className={`flex items-center justify-between p-2 rounded-md border bg-card/50 hover:bg-card transition-colors group ${selectable ? "cursor-pointer hover:border-primary/50" : ""}`}
+                style={{ marginLeft: `${level * 1.5}rem` }}
+                onClick={(e) => {
+                    // Prevent toggling if clicking on buttons
+                    if (selectable && onToggleSelect && !(e.target as HTMLElement).closest('button')) {
+                        onToggleSelect(preset.id);
+                    }
+                }}
+            >
+                {selectable && onToggleSelect && (
+                    <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+                        <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => onToggleSelect(preset.id)}
+                            className="mr-3"
+                        />
+                    </div>
+                )}
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {level > 0 && <div className="w-1.5 h-1.5 rounded-full bg-border shrink-0" />}
+                    <span className="text-sm font-medium truncate">{preset.name}</span>
+                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 shrink-0">{preset.estimated_minutes}m</Badge>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                        size="icon" variant="ghost"
+                        className="h-6 w-6 text-muted-foreground hover:text-primary"
+                        title="Add sub-preset"
+                        onClick={() => onAddSubPreset(preset.id)}
+                    >
+                        <Plus className="w-3 h-3" />
+                    </Button>
+                    <Button
+                        size="icon" variant="ghost"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        title="Delete preset"
+                        onClick={() => onDelete(preset.id)}
+                    >
+                        <Trash2 className="w-3 h-3" />
+                    </Button>
+                </div>
+            </div>
+            {/* Recursively render children */}
+            {children.map(child => (
+                <PresetRow
+                    key={child.id}
+                    preset={child}
+                    allPresets={allPresets}
+                    level={level + 1}
+                    onDelete={onDelete}
+                    onAddSubPreset={onAddSubPreset}
+                    selectable={selectable}
+                    selectedIds={selectedIds}
+                    onToggleSelect={onToggleSelect}
+                />
+            ))}
+        </div>
+    );
+}
 
 function PartRow({
     part,
+    allParts,
+    level = 0,
     onStartEdit,
     onToggleStatus,
     onDelete,
+    onAddSubpart,
 }: {
     part: StudyPart;
-    onStartEdit: () => void;
-    onToggleStatus: () => void;
-    onDelete: () => void;
+    allParts: StudyPart[];
+    level?: number;
+    onStartEdit: (part: StudyPart) => void;
+    onToggleStatus: (part: StudyPart) => void;
+    onDelete: (part: StudyPart) => void;
+    onAddSubpart: (parentId: string) => void;
 }) {
     const status = STATUS_MAP[part.status] || STATUS_MAP["not-started"];
+    const children = allParts.filter(p => p.parent_id === part.id);
 
     return (
-        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 hover:bg-secondary/20 transition-colors group">
-            {/* Status toggle */}
-            <button
-                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${part.status === "completed" ? "border-green-500 bg-green-500/20" :
-                    part.status === "in-progress" ? "border-blue-500 bg-blue-500/20" :
-                        "border-muted-foreground/30 hover:border-muted-foreground/60"
-                    }`}
-                onClick={onToggleStatus}
-                title={`Status: ${status.label} → Click to change`}
+        <div className="group">
+            <div
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 hover:bg-secondary/20 transition-colors ${level > 0 ? "border-t border-border/20" : ""}`}
+                style={{ paddingLeft: `${Math.max(1, level * 1.5 + 1)}rem` }}
             >
-                {part.status === "completed" && <Check className="w-3 h-3 text-green-500 dark:text-green-400" />}
-                {part.status === "in-progress" && <div className="w-2 h-2 rounded-sm bg-blue-500" />}
-            </button>
+                {/* Status toggle */}
+                <button
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${part.status === "completed" ? "border-green-500 bg-green-500/20" :
+                        part.status === "in-progress" ? "border-blue-500 bg-blue-500/20" :
+                            "border-muted-foreground/30 hover:border-muted-foreground/60"
+                        }`}
+                    onClick={() => onToggleStatus(part)}
+                    title={`Status: ${status.label} → Click to change`}
+                >
+                    {part.status === "completed" && <Check className="w-3 h-3 text-green-500 dark:text-green-400" />}
+                    {part.status === "in-progress" && <div className="w-2 h-2 rounded-sm bg-blue-500" />}
+                </button>
 
-            {/* Part name */}
-            <span className={`text-xs sm:text-sm flex-1 truncate ${part.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
-                {part.name}
-            </span>
+                {/* Part name */}
+                <span className={`text-xs sm:text-sm flex-1 truncate ${part.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                    {part.name}
+                </span>
 
-            {/* Meta badges */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-                {/* Duration badge */}
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 font-normal">
-                    <Clock className="w-2.5 h-2.5" />
-                    {part.estimated_minutes >= 60 ? `${part.estimated_minutes / 60}h` : `${part.estimated_minutes}m`}
-                </Badge>
-
-                {/* Date badge */}
-                {part.scheduled_date && (
+                {/* Meta badges */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {/* Duration badge */}
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 font-normal">
-                        <Calendar className="w-2.5 h-2.5" />
-                        {new Date(part.scheduled_date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        <Clock className="w-2.5 h-2.5" />
+                        {part.estimated_minutes >= 60 ? `${part.estimated_minutes / 60}h` : `${part.estimated_minutes}m`}
                     </Badge>
-                )}
 
-                {/* Time badge */}
-                {part.scheduled_time && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
-                        {part.scheduled_time}
+                    {/* Date badge */}
+                    {part.scheduled_date && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 font-normal">
+                            <Calendar className="w-2.5 h-2.5" />
+                            {new Date(part.scheduled_date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        </Badge>
+                    )}
+
+                    {/* Time badge */}
+                    {part.scheduled_time && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                            {part.scheduled_time}
+                        </Badge>
+                    )}
+
+                    {/* Status badge */}
+                    <Badge className={`text-[10px] px-1.5 py-0 ${status.bg} ${status.color} border-0`}>
+                        {status.label}
                     </Badge>
-                )}
+                </div>
 
-                {/* Status badge */}
-                <Badge className={`text-[10px] px-1.5 py-0 ${status.bg} ${status.color} border-0`}>
-                    {status.label}
-                </Badge>
+                {/* Actions (visible on hover) */}
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => onAddSubpart(part.id)} title="Add sub-part">
+                        <Plus className="w-3 h-3" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => onStartEdit(part)}>
+                        <Pencil className="w-2.5 h-2.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => onDelete(part)}>
+                        <Trash2 className="w-3 h-3" />
+                    </Button>
+                </div>
             </div>
 
-            {/* Actions (visible on hover) */}
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={onStartEdit}>
-                    <Pencil className="w-2.5 h-2.5" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={onDelete}>
-                    <Trash2 className="w-3 h-3" />
-                </Button>
-            </div>
+            {/* Render children recursively */}
+            {children.length > 0 && (
+                <div className="border-l-2 border-border/30 ml-4 sm:ml-6">
+                    {children.map(child => (
+                        <PartRow
+                            key={child.id}
+                            part={child}
+                            allParts={allParts}
+                            level={level + 1}
+                            onStartEdit={onStartEdit}
+                            onToggleStatus={onToggleStatus}
+                            onDelete={onDelete}
+                            onAddSubpart={onAddSubpart}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
