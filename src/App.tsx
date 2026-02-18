@@ -19,10 +19,44 @@ import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import WelcomePage from "./pages/WelcomePage";
+import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { AnimatedPage } from "./components/layout/AnimatedPage";
 import { initDatabase } from "./lib/turso";
+import { AnimatePresence } from "framer-motion";
+import { useLocation } from "react-router-dom";
 
 const queryClient = new QueryClient();
+
+const AppContent = () => {
+  const location = useLocation();
+
+  return (
+    <AIProvider>
+      <Routes location={location} key={location.pathname.split('/')[1] === 'welcome' || location.pathname.split('/')[1] === 'login' || location.pathname.split('/')[1] === 'register' ? location.pathname : 'dashboard'}>
+        {/* Public routes wrapped in individual AnimatePresence/AnimatedPage if needed, but for now let's just use standard routes for them or wrap them */}
+        <Route path="/welcome" element={<AnimatedPage><WelcomePage /></AnimatedPage>} />
+        <Route path="/login" element={<AnimatedPage><LoginPage /></AnimatedPage>} />
+        <Route path="/register" element={<AnimatedPage><RegisterPage /></AnimatedPage>} />
+
+        {/* Protected routes under DashboardLayout */}
+        <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Index />} />
+          <Route path="/tasks" element={<TasksPage />} />
+          <Route path="/finance" element={<FinancePage />} />
+          <Route path="/notes" element={<NotesPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/study" element={<StudyPage />} />
+          <Route path="/habits" element={<HabitsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+
+        {/* Catch-all */}
+        <Route path="*" element={<AnimatedPage><NotFound /></AnimatedPage>} />
+      </Routes>
+    </AIProvider>
+  );
+};
 
 const App = () => {
   // Initialize light mode by default
@@ -59,30 +93,7 @@ const App = () => {
             }}
           />
           <BrowserRouter>
-            <AIProvider>
-              <AnimatedPage>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/welcome" element={<WelcomePage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-
-                  {/* Protected routes */}
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                  <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
-                  <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
-                  <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
-                  <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
-                  <Route path="/study" element={<ProtectedRoute><StudyPage /></ProtectedRoute>} />
-                  <Route path="/habits" element={<ProtectedRoute><HabitsPage /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-
-                  {/* Catch-all */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </AnimatedPage>
-            </AIProvider>
+            <AppContent />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

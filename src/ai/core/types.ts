@@ -99,11 +99,16 @@ export interface HabitHooks {
 }
 
 export interface StudyHooks {
-    addChapter: { mutateAsync: (data: unknown) => Promise<void> };
-    updateProgress: { mutateAsync: (data: unknown) => Promise<void> };
-    deleteChapter: { mutateAsync: (id: string) => Promise<void> };
-    createStudyTask?: (data: unknown) => Promise<unknown>;
-    chapters: Array<{ id: string; subject: string; chapter_name: string; progress_percentage: number; status: string }>;
+    addSubject?: { mutateAsync: (name: string) => Promise<unknown> };
+    deleteSubject?: { mutateAsync: (id: string) => Promise<void> };
+    addChapter?: { mutateAsync: (data: { subjectId: string; name: string }) => Promise<unknown> };
+    deleteChapter?: { mutateAsync: (id: string) => Promise<void> };
+    addPart?: { mutateAsync: (data: { chapterId: string; name: string; estimatedMinutes?: number }) => Promise<unknown> };
+    togglePartStatus?: { mutateAsync: (data: { id: string; currentStatus: string }) => Promise<void> };
+    deletePart?: { mutateAsync: (id: string) => Promise<void> };
+    subjects?: Array<{ id: string; name: string; color_index: number }>;
+    chapters?: Array<{ id: string; subject_id: string; name: string }>;
+    parts?: Array<{ id: string; chapter_id: string; name: string; status: string; estimated_minutes: number }>;
 }
 
 export interface InventoryHooks {

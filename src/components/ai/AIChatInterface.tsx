@@ -96,7 +96,7 @@ export function AIChatInterface() {
     const { addNote, updateNote, deleteNote, togglePin, updateColor, archiveNote, trashNote, notes } = useNotes();
     const { addHabit, completeHabit, deleteHabit, deleteAllHabits, habits } = useHabits();
     const { addItem, deleteItem, updateItem, items } = useInventory();
-    const { addChapter, updateProgress, deleteChapter, chapters } = useStudy();
+    const { subjects, chapters, parts, addSubject, addChapter, addPart, togglePartStatus, deleteSubject, deleteChapter, deletePart } = useStudy();
 
     // Load history from localStorage
     useEffect(() => {
@@ -363,25 +363,49 @@ export function AIChatInterface() {
                     break;
 
                 // STUDY
-                case "ADD_STUDY_CHAPTER":
-                    await addChapter.mutateAsync({
-                        subject: data.subject as string,
-                        chapter_name: data.chapter_name as string,
-                    });
+                case "ADD_STUDY_SUBJECT":
+                    await addSubject.mutateAsync(String(data.name || ""));
                     break;
-                case "UPDATE_STUDY_PROGRESS":
-                    const chapterToUpdate = chapters?.find(
-                        (c) =>
-                            c.subject.toLowerCase() === (data.subject as string || "").toLowerCase() &&
-                            c.chapter_name.toLowerCase().includes((data.chapter_name as string || "").toLowerCase())
-                    );
-                    if (chapterToUpdate) {
-                        await updateProgress.mutateAsync({
-                            id: chapterToUpdate.id,
-                            progress_percentage: data.progress_percentage as number,
-                        });
+                case "ADD_STUDY_CHAPTER": {
+                    const subjectName = String(data.subject_name || data.subject || "").toLowerCase();
+                    const subject = subjects?.find(s => s.name.toLowerCase().includes(subjectName));
+                    if (subject) {
+                        await addChapter.mutateAsync({ subjectId: subject.id, name: String(data.chapter_name || data.name || "") });
                     }
                     break;
+                }
+                case "ADD_STUDY_PART": {
+                    const chName = String(data.chapter_name || "").toLowerCase();
+                    const ch = chapters?.find(c => c.name.toLowerCase().includes(chName));
+                    if (ch) {
+                        await addPart.mutateAsync({ chapterId: ch.id, name: String(data.part_name || data.name || ""), estimatedMinutes: Number(data.estimated_minutes || 30) });
+                    }
+                    break;
+                }
+                case "UPDATE_STUDY_PART_STATUS": {
+                    const pName = String(data.part_name || data.name || "").toLowerCase();
+                    const part = parts?.find(p => p.name.toLowerCase().includes(pName));
+                    if (part) await togglePartStatus.mutateAsync({ id: part.id, currentStatus: part.status });
+                    break;
+                }
+                case "DELETE_STUDY_SUBJECT": {
+                    const sName = String(data.subject_name || data.name || "").toLowerCase();
+                    const subj = subjects?.find(s => s.name.toLowerCase().includes(sName));
+                    if (subj) await deleteSubject.mutateAsync(subj.id);
+                    break;
+                }
+                case "DELETE_STUDY_CHAPTER": {
+                    const dcName = String(data.chapter_name || data.name || "").toLowerCase();
+                    const dch = chapters?.find(c => c.name.toLowerCase().includes(dcName));
+                    if (dch) await deleteChapter.mutateAsync(dch.id);
+                    break;
+                }
+                case "DELETE_STUDY_PART": {
+                    const dpName = String(data.part_name || data.name || "").toLowerCase();
+                    const dp = parts?.find(p => p.name.toLowerCase().includes(dpName));
+                    if (dp) await deletePart.mutateAsync(dp.id);
+                    break;
+                }
 
                 // BUDGET
                 case "ADD_BUDGET":
@@ -574,7 +598,12 @@ Budgets: ${budgets?.filter(b => b.type === 'budget').map(b => `${b.name}: à§³
 Savings: ${savingsGoals?.map(s => `${s.name}: à§³${s.current_amount}/à§³${s.target_amount}`).join(', ') || 'None'}
 
 â•â•â• STUDY â•â•â•
-${chapters?.map(s => `- ${s.subject}: ${s.chapter_name} (${s.progress_percentage || 0}%)`).join('\n') || '(no active study chapters)'}
+${subjects?.map(s => {
+                const sChapters = chapters?.filter(c => c.subject_id === s.id) || [];
+                const sParts = parts?.filter(p => sChapters.some(c => c.id === p.chapter_id)) || [];
+                const done = sParts.filter(p => p.status === 'completed').length;
+                return `${s.name}: ${sChapters.length} ch, ${done}/${sParts.length} parts done`;
+            }).join('\n') || '(no study data)'}
 
 â•â•â• NOTES (${notesData.length} total) â•â•â•
 ${notesData.map(n => `- "${n.title}" [${n.tags || 'no tags'}]${n.checklist ? ` â˜‘ï¸${n.checklist}` : ''} â†’ ${n.preview.replace(/\n/g, ' ').substring(0, 80)}...`).join('\n') || '(no notes)'}

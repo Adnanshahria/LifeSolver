@@ -306,8 +306,13 @@ export function useBudget() {
         return budget.target_amount - spent;
     };
 
-    // Get the primary monthly budget (first monthly budget or highest target)
-    const primaryBudget = budgetGoals.find(b => b.period === "monthly") || budgetGoals[0];
+    // Get the monthly budget for the current month
+    const now = new Date();
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const primaryBudget = budgetGoals.find(b => b.period === "monthly" && b.start_date?.startsWith(currentMonthStr))
+        || budgetGoals.find(b => b.period === "monthly" && !b.start_date)
+        || budgetGoals.find(b => b.period === "monthly")
+        || budgetGoals[0];
     const budgetRemaining = primaryBudget ? getBudgetRemaining(primaryBudget) : 0;
 
     return {

@@ -5,4 +5,4 @@ export { financeSchema, initFinanceTable } from "./finance";
 export { notesSchema, initNotesTable } from "./notes";
 export { habitsSchema, initHabitsTable } from "./habits";
 export { inventorySchema, initInventoryTable } from "./inventory";
-export { studySchema, initStudyTable } from "./study";
+export { studySubjectsSchema, studyChaptersSchema, studyPartsSchema, initStudyTable } from "./study";

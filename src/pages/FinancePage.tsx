@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { SEO } from "@/components/seo/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Wallet, TrendingUp, TrendingDown, Trash2, ChevronLeft, ChevronRight, Clock, X, Calendar as CalendarIcon, Pencil, PiggyBank, Target, Download, Star, ListFilter, PieChart as PieChartIcon, BarChart3 as BarChartIcon, History, CalendarX } from "lucide-react";
+import { Plus, Wallet, TrendingUp, TrendingDown, Trash2, ChevronLeft, ChevronRight, Clock, X, Calendar as CalendarIcon, Pencil, PiggyBank, Target, Download, Star, ListFilter, PieChart as PieChartIcon, BarChart3 as BarChartIcon, History, CalendarX, Archive, Zap } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,13 +48,45 @@ export default function FinancePage() {
     const currentBudgetGoals = financeViewMode === "default" ? budgetGoals : specialBudgetGoals;
     const currentSavingsGoals = financeViewMode === "default" ? savingsGoals : specialSavingsGoals;
     const allGoals = useMemo(() => [...(currentBudgetGoals || []), ...(currentSavingsGoals || [])], [currentBudgetGoals, currentSavingsGoals]);
+
+    // Time-based goal categorization
+    const getGoalTimeStatus = (item: any): "active" | "upcoming" | "archive" => {
+        if (item.type !== "budget" || !item.start_date || !item.period) return "active";
+        const now = new Date();
+        const [year, month] = item.start_date.split('-').map(Number);
+        let startDate: Date;
+        let endDate: Date;
+        switch (item.period) {
+            case "weekly":
+                startDate = new Date(year, month - 1, parseInt(item.start_date.split('-')[2] || '1'));
+                endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + 6);
+                break;
+            case "monthly":
+                startDate = new Date(year, month - 1, 1);
+                endDate = new Date(year, month, 0, 23, 59, 59);
+                break;
+            case "yearly":
+                startDate = new Date(year, 0, 1);
+                endDate = new Date(year, 11, 31, 23, 59, 59);
+                break;
+            default:
+                return "active";
+        }
+        if (now < startDate) return "upcoming";
+        if (now > endDate) return "archive";
+        return "active";
+    };
+
+    const [goalsFilter, setGoalsFilter] = useState<"active" | "upcoming" | "archive">("active");
+    const filteredGoals = useMemo(() => allGoals.filter(g => getGoalTimeStatus(g) === goalsFilter), [allGoals, goalsFilter]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isSavingsHistoryOpen, setIsSavingsHistoryOpen] = useState(false);
     const [historyType, setHistoryType] = useState<"all" | "income" | "expense">("all");
     const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
 
-    const [editingGoal, setEditingGoal] = useState<{ id: string; name: string; target_amount: number; type: "budget" | "savings"; period?: string } | null>(null);
+    const [editingGoal, setEditingGoal] = useState<{ id: string; name: string; target_amount: string; type: "budget" | "savings" } | null>(null);
     const [newBudget, setNewBudget] = useState<{
         name: string;
         type: "budget" | "savings";
@@ -730,9 +762,9 @@ export default function FinancePage() {
                                         onChange={(e) => setNewEntry({ ...newEntry, description: e.target.value })}
                                     />
 
-                                    {/* Source selector for expenses - shows current mode's savings */}
+                                    {/* Source selector for expenses - shows current mode's budgets and savings */}
                                     {newEntry.type === "expense" && (
-                                        (financeViewMode === "default" ? savingsGoals?.length > 0 : specialSavingsGoals?.length > 0)
+                                        ((financeViewMode === "default" ? (savingsGoals?.length > 0 || budgetGoals?.length > 0) : (specialSavingsGoals?.length > 0 || specialBudgetGoals?.length > 0)))
                                     ) && (
                                             <Select
                                                 value={newEntry.source}
@@ -743,33 +775,38 @@ export default function FinancePage() {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="budget">
-                                                        {financeViewMode === "special" ? "⭐ Special Budget" : "Budget"}
+                                                        {financeViewMode === "special" ? "⭐ No specific goal" : "No specific goal"}
                                                     </SelectItem>
+                                                    {(financeViewMode === "default" ? budgetGoals : specialBudgetGoals)?.map(b => (
+                                                        <SelectItem key={b.id} value={b.id}>
+                                                            📊 {b.name} (৳{getBudgetRemaining(b as any).toLocaleString()} left)
+                                                        </SelectItem>
+                                                    ))}
                                                     {(financeViewMode === "default" ? savingsGoals : specialSavingsGoals)?.map(s => (
                                                         <SelectItem key={s.id} value={s.id}>
-                                                            {financeViewMode === "special" ? "⭐ " : ""}{s.name} (৳{s.current_amount.toLocaleString()})
+                                                            💰 {s.name} (৳{s.current_amount.toLocaleString()})
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
                                         )}
 
-                                    {/* Savings destination for income - shows current mode's savings */}
+                                    {/* Savings/Budget destination for income - shows current mode's goals */}
                                     {newEntry.type === "income" && (
-                                        (financeViewMode === "default" ? savingsGoals?.length > 0 : specialSavingsGoals?.length > 0)
+                                        ((financeViewMode === "default" ? (savingsGoals?.length > 0 || budgetGoals?.length > 0) : (specialSavingsGoals?.length > 0 || specialBudgetGoals?.length > 0)))
                                     ) && (
                                             <Select
                                                 value={newEntry.source}
                                                 onValueChange={(v) => setNewEntry({ ...newEntry, source: v })}
                                             >
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Add to savings..." />
+                                                    <SelectValue placeholder="Add to goal..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="budget">Don't add to savings</SelectItem>
+                                                    <SelectItem value="budget">Don't add to any goal</SelectItem>
                                                     {(financeViewMode === "default" ? savingsGoals : specialSavingsGoals)?.map(s => (
                                                         <SelectItem key={s.id} value={s.id}>
-                                                            {financeViewMode === "special" ? "⭐ " : ""}Add to {s.name} (৳{s.current_amount.toLocaleString()})
+                                                            💰 Add to {s.name} (৳{s.current_amount.toLocaleString()})
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -890,13 +927,13 @@ export default function FinancePage() {
                                 <div className="p-1.5 sm:p-2 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
                                     <Target className="w-4 h-4 sm:w-5 sm:h-5" />
                                 </div>
-                                <span className="text-muted-foreground text-xs sm:text-sm font-medium">Budget Left</span>
+                                <span className="text-muted-foreground text-xs sm:text-sm font-medium">Monthly Budget</span>
                             </div>
                             <p className={`text-xl sm:text-2xl font-bold tracking-tight ${budgetRemaining >= 0 ? "text-amber-600 dark:text-amber-400" : "text-red-500"}`}>
                                 ৳{budgetRemaining.toLocaleString()}
                             </p>
                             <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
-                                {primaryBudget ? `${primaryBudget.name}` : "No budget"}
+                                {primaryBudget ? `${new Date().toLocaleString('default', { month: 'long' })}` : "No budget"}
                             </p>
                         </div>
                     </motion.div>
@@ -940,7 +977,7 @@ export default function FinancePage() {
                                     <h4 className="font-semibold text-lg text-indigo-950 dark:text-indigo-100 tracking-tight flex items-center gap-2">
                                         Goals
                                         <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider">
-                                            {allGoals.length} Active
+                                            {filteredGoals.length} {goalsFilter === "active" ? "Active" : goalsFilter === "upcoming" ? "Upcoming" : "Archived"}
                                         </span>
                                     </h4>
                                     <p className="text-xs text-indigo-600/70 dark:text-indigo-300/70 font-medium mt-0.5">
@@ -949,12 +986,27 @@ export default function FinancePage() {
                                 </div>
 
                                 <div className="flex items-center gap-2">
+                                    {/* Filter Dropdown */}
+                                    <Select value={goalsFilter} onValueChange={(v) => setGoalsFilter(v as "active" | "upcoming" | "archive")}>
+                                        <SelectTrigger className="h-8 w-[80px] text-xs bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 transition-all focus:ring-indigo-500/30">
+                                            <div className="flex items-center gap-1.5">
+                                                {goalsFilter === "active" ? <Zap className="w-3.5 h-3.5" /> : goalsFilter === "upcoming" ? <Clock className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
+                                                <span className="capitalize">{goalsFilter === "active" ? "Active" : goalsFilter === "upcoming" ? "Soon" : "Past"}</span>
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent align="end">
+                                            <SelectItem value="active">⚡ Active</SelectItem>
+                                            <SelectItem value="upcoming">🕐 Upcoming</SelectItem>
+                                            <SelectItem value="archive">📦 Archive</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+
                                     {/* Sort Dropdown */}
                                     <Select value={goalsSortBy} onValueChange={(v) => setGoalsSortBy(v as "date" | "amount")}>
-                                        <SelectTrigger className="h-8 w-[100px] text-xs bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 transition-all focus:ring-indigo-500/30">
+                                        <SelectTrigger className="h-8 w-[80px] text-xs bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 transition-all focus:ring-indigo-500/30">
                                             <div className="flex items-center gap-1.5">
                                                 <ListFilter className="w-3.5 h-3.5" />
-                                                <span>Sort by</span>
+                                                <span>Sort</span>
                                             </div>
                                         </SelectTrigger>
                                         <SelectContent align="end">
@@ -1134,18 +1186,19 @@ export default function FinancePage() {
 
                             </div>
 
-
                             {/* Goals List - Rendered within Card */}
-                            <div className={`grid gap-2 overflow-y-auto custom-scrollbar pr-1 mt-2.5 ${allGoals.length > 0 ? "h-[70px]" : "h-auto"}`}>
-                                {allGoals.length === 0 ? (
+                            <div className={`grid gap-2 overflow-y-auto custom-scrollbar pr-1 mt-2.5 ${filteredGoals.length > 0 ? "max-h-[120px]" : "h-auto"}`}>
+                                {filteredGoals.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-4 text-center bg-indigo-500/5 rounded-lg border border-dashed border-indigo-500/20">
                                         <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-full mb-1.5">
-                                            <Target className="w-3.5 h-3.5 text-indigo-500" />
+                                            {goalsFilter === "upcoming" ? <Clock className="w-3.5 h-3.5 text-indigo-500" /> : goalsFilter === "archive" ? <Archive className="w-3.5 h-3.5 text-indigo-500" /> : <Target className="w-3.5 h-3.5 text-indigo-500" />}
                                         </div>
-                                        <p className="text-xs font-medium text-indigo-900 dark:text-indigo-200">No goals</p>
+                                        <p className="text-xs font-medium text-indigo-900 dark:text-indigo-200">
+                                            {goalsFilter === "active" ? "No active goals" : goalsFilter === "upcoming" ? "No upcoming goals" : "No archived goals"}
+                                        </p>
                                     </div>
                                 ) : (
-                                    allGoals
+                                    filteredGoals
                                         .sort((a, b) => {
                                             if (goalsSortBy === "amount") {
                                                 return b.target_amount - a.target_amount;
@@ -1183,8 +1236,8 @@ export default function FinancePage() {
                                                                 <h5 className="font-semibold text-xs text-indigo-950 dark:text-indigo-100 truncate">{item.name}</h5>
                                                                 {item.is_special && <Star className="w-2.5 h-2.5 text-yellow-500 fill-yellow-500" />}
                                                             </div>
-                                                            <div className="text-[10px] font-medium text-indigo-900/60 dark:text-indigo-200/60">
-                                                                {percentage.toFixed(0)}%
+                                                            <div className="text-[10px] font-medium text-indigo-900/60 dark:text-indigo-200/60 whitespace-nowrap">
+                                                                ৳{spent.toLocaleString()} / ৳{item.target_amount.toLocaleString()}
                                                             </div>
                                                         </div>
                                                         <div className="h-1.5 w-full bg-indigo-950/5 dark:bg-white/5 rounded-full overflow-hidden">
@@ -1198,7 +1251,15 @@ export default function FinancePage() {
                                                     </div>
 
                                                     {/* Compact Actions */}
-                                                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                    <div className={`flex items-center gap-0.5 transition-opacity duration-200 ${item.is_special ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 text-indigo-900/40 hover:text-indigo-600"
+                                                            onClick={() => setEditingGoal({ id: item.id, name: item.name, target_amount: String(item.target_amount), type: item.type })}
+                                                        >
+                                                            <Pencil className="w-3 h-3" />
+                                                        </Button>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -1248,6 +1309,46 @@ export default function FinancePage() {
                                         })
                                 )}</div>
                         </div>
+
+                        {/* Edit Goal Dialog */}
+                        <Dialog open={!!editingGoal} onOpenChange={(open) => !open && setEditingGoal(null)}>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Edit {editingGoal?.type === "budget" ? "Budget" : "Savings Goal"}</DialogTitle>
+                                    <DialogDescription>Update goal name or target amount.</DialogDescription>
+                                </DialogHeader>
+                                {editingGoal && (
+                                    <div className="space-y-4 pt-2">
+                                        <Input
+                                            placeholder="Goal name"
+                                            value={editingGoal.name}
+                                            onChange={(e) => setEditingGoal({ ...editingGoal, name: e.target.value })}
+                                        />
+                                        <Input
+                                            type="number"
+                                            placeholder="Target Amount (৳)"
+                                            value={editingGoal.target_amount}
+                                            onChange={(e) => setEditingGoal({ ...editingGoal, target_amount: e.target.value })}
+                                        />
+                                        <Button
+                                            className="w-full"
+                                            onClick={async () => {
+                                                if (!editingGoal.name || !editingGoal.target_amount) return;
+                                                await updateBudget.mutateAsync({
+                                                    id: editingGoal.id,
+                                                    name: editingGoal.name,
+                                                    target_amount: parseFloat(editingGoal.target_amount),
+                                                });
+                                                setEditingGoal(null);
+                                            }}
+                                            disabled={updateBudget.isPending}
+                                        >
+                                            {updateBudget.isPending ? "Saving..." : "Save Changes"}
+                                        </Button>
+                                    </div>
+                                )}
+                            </DialogContent>
+                        </Dialog>
                     </motion.div>
                 </div>
 

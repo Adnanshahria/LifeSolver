@@ -5,22 +5,13 @@ import { useLocation } from "react-router-dom";
 import {
     Plus, Check, Clock, AlertTriangle, Trash2, Pin, PinOff, Edit,
     BookOpen, Wallet, Heart, Folder, Calendar, Timer, DollarSign,
-    ChevronDown, Filter, LayoutGrid, List, ArrowUpDown, Archive, Zap, CalendarClock, Package, Boxes, CheckSquare
+    ChevronDown, Filter, LayoutGrid, List, ArrowUpDown, Archive, Zap, CalendarClock, Package, Boxes, CheckSquare, GraduationCap
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-    SelectGroup,
-    SelectLabel,
-} from "@/components/ui/select";
 import {
     Dialog,
     DialogContent,
@@ -35,8 +26,6 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { DatePicker } from "@/components/ui/date-picker";
-import { TimePicker } from "@/components/ui/time-picker";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { useStudy } from "@/hooks/useStudy";
 import { useBudget } from "@/hooks/useBudget";
@@ -99,7 +88,7 @@ const defaultNewTask: NewTaskState = {
 
 export default function TasksPage() {
     const { tasks, isLoading, addTask, updateTask, deleteTask, completeTask } = useTasks();
-    const { chapters } = useStudy();
+    const { subjects, chapters, chaptersBySubject: studyChaptersBySubject, partsByChapter } = useStudy();
     const { budgets } = useBudget();
     const { habits } = useHabits();
     const { items: inventoryItems } = useInventory();
@@ -117,15 +106,21 @@ export default function TasksPage() {
     const [showTimeAdjustPopup, setShowTimeAdjustPopup] = useState(false);
     const [pendingDuration, setPendingDuration] = useState<string>("");
 
+    // Import Study State
+    const [importStudyOpen, setImportStudyOpen] = useState(false);
+    const [importSubjectId, setImportSubjectId] = useState("");
+    const [importChapterId, setImportChapterId] = useState("");
+
     // Group chapters by subject for the selector
     const chaptersBySubject = useMemo(() => {
         const grouped: Record<string, typeof chapters> = {};
         chapters.forEach(ch => {
-            if (!grouped[ch.subject]) grouped[ch.subject] = [];
-            grouped[ch.subject].push(ch);
+            const subject = subjects.find(s => s.id === ch.subject_id)?.name || "Unknown";
+            if (!grouped[subject]) grouped[subject] = [];
+            grouped[subject].push(ch);
         });
         return grouped;
-    }, [chapters]);
+    }, [chapters, subjects]);
 
     const location = useLocation();
 
@@ -299,7 +294,11 @@ export default function TasksPage() {
         if (!task.context_type || task.context_type === "general") return null;
         if (task.context_type === "study" && task.context_id) {
             const chapter = chapters.find(c => c.id === task.context_id);
-            return chapter ? `${chapter.subject} - ${chapter.chapter_name} ` : null;
+            if (chapter) {
+                const subject = subjects.find(s => s.id === chapter.subject_id);
+                return `${subject?.name || "Study"} - ${chapter.name} `;
+            }
+            return null;
         }
         if (task.context_type === "finance" && task.budget_id) {
             const budget = budgets.find(b => b.id === task.budget_id);
@@ -485,16 +484,19 @@ export default function TasksPage() {
                     <div className="top-toolbar w-full sm:w-auto">
 
                         {/* Tab Dropdown */}
-                        <Select value={tabView} onValueChange={(v) => setTabView(v as typeof tabView)}>
-                            <SelectTrigger className="w-auto min-w-[100px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="upcoming">Soon ({tabCounts.upcoming})</SelectItem>
-                                <SelectItem value="active">Active ({tabCounts.active})</SelectItem>
-                                <SelectItem value="archive">Archive</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        {/* Tab Dropdown */}
+                        <div className="relative">
+                            <select
+                                className="h-9 w-auto min-w-[100px] appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                value={tabView}
+                                onChange={(e) => setTabView(e.target.value as typeof tabView)}
+                            >
+                                <option value="upcoming">Soon ({tabCounts.upcoming})</option>
+                                <option value="active">Active ({tabCounts.active})</option>
+                                <option value="archive">Archive</option>
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                        </div>
 
                         {/* Context Filter */}
                         <Popover>
@@ -564,8 +566,16 @@ export default function TasksPage() {
                             </button>
                         </div>
 
-                        {/* Spacer to push + New to the right */}
-                        <div className="flex-1" />
+                        {/* Import Study Button */}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 h-8 text-xs sm:text-sm border-dashed"
+                            onClick={() => setImportStudyOpen(true)}
+                        >
+                            <GraduationCap className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Import Study</span>
+                        </Button>
 
                         {/* Add Task */}
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -595,25 +605,31 @@ export default function TasksPage() {
                                     />
 
                                     <div className="grid grid-cols-2 gap-4">
-                                        <Select
-                                            value={newTask.priority}
-                                            onValueChange={(v) => setNewTask({ ...newTask, priority: v as Task["priority"] })}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Priority" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="low">🟢 Low</SelectItem>
-                                                <SelectItem value="medium">🟡 Medium</SelectItem>
-                                                <SelectItem value="high">🟠 High</SelectItem>
-                                                <SelectItem value="urgent">🔴 Urgent</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <DatePicker
-                                            value={newTask.due_date}
-                                            onChange={(date) => setNewTask({ ...newTask, due_date: date })}
-                                            placeholder="Due date"
-                                        />
+                                        <div className="space-y-1">
+                                            <label className="text-xs text-muted-foreground">Priority</label>
+                                            <div className="relative">
+                                                <select
+                                                    className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                    value={newTask.priority}
+                                                    onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as Task["priority"] })}
+                                                >
+                                                    <option value="low">🟢 Low</option>
+                                                    <option value="medium">🟡 Medium</option>
+                                                    <option value="high">🟠 High</option>
+                                                    <option value="urgent">🔴 Urgent</option>
+                                                </select>
+                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs text-muted-foreground">Due Date</label>
+                                            <Input
+                                                type="date"
+                                                value={newTask.due_date.split('T')[0]}
+                                                onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                                                className="h-9"
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* Context Selector */}
@@ -622,80 +638,78 @@ export default function TasksPage() {
                                             <Folder className="w-4 h-4" />
                                             Link to Module
                                         </label>
-                                        <Select
-                                            value={newTask.context_type}
-                                            onValueChange={(v) => setNewTask({ ...newTask, context_type: v as Task["context_type"], context_id: "" })}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="general">📁 General</SelectItem>
-                                                <SelectItem value="study">📚 Study</SelectItem>
-                                                <SelectItem value="finance">💰 Finance</SelectItem>
-                                                <SelectItem value="habit">💪 Habit</SelectItem>
-                                                <SelectItem value="inventory">📦 Inventory</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="relative">
+                                            <select
+                                                className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                value={newTask.context_type}
+                                                onChange={(e) => setNewTask({ ...newTask, context_type: e.target.value as Task["context_type"], context_id: "" })}
+                                            >
+                                                <option value="general">📁 General</option>
+                                                <option value="study">📚 Study</option>
+                                                <option value="finance">💰 Finance</option>
+                                                <option value="habit">💪 Habit</option>
+                                                <option value="inventory">📦 Inventory</option>
+                                            </select>
+                                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                        </div>
 
                                         {/* Dynamic Context ID Selector */}
                                         {newTask.context_type === "study" && (
-                                            <Select
-                                                value={newTask.context_id}
-                                                onValueChange={(v) => setNewTask({ ...newTask, context_id: v })}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select chapter..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
+                                            <div className="relative">
+                                                <select
+                                                    className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                    value={newTask.context_id || ""}
+                                                    onChange={(e) => setNewTask({ ...newTask, context_id: e.target.value })}
+                                                >
+                                                    <option value="" disabled>Select chapter...</option>
                                                     {Object.entries(chaptersBySubject).map(([subject, chs]) => (
-                                                        <SelectGroup key={subject}>
-                                                            <SelectLabel>{subject}</SelectLabel>
+                                                        <optgroup key={subject} label={subject}>
                                                             {chs.map(ch => (
-                                                                <SelectItem key={ch.id} value={ch.id}>
-                                                                    {ch.chapter_name}
-                                                                </SelectItem>
+                                                                <option key={ch.id} value={ch.id}>
+                                                                    {ch.name}
+                                                                </option>
                                                             ))}
-                                                        </SelectGroup>
+                                                        </optgroup>
                                                     ))}
-                                                </SelectContent>
-                                            </Select>
+                                                </select>
+                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                            </div>
                                         )}
 
                                         {newTask.context_type === "habit" && (
-                                            <Select
-                                                value={newTask.context_id}
-                                                onValueChange={(v) => setNewTask({ ...newTask, context_id: v })}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select habit..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
+                                            <div className="relative">
+                                                <select
+                                                    className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                    value={newTask.context_id || ""}
+                                                    onChange={(e) => setNewTask({ ...newTask, context_id: e.target.value })}
+                                                >
+                                                    <option value="" disabled>Select habit...</option>
                                                     {habits.map(habit => (
-                                                        <SelectItem key={habit.id} value={habit.id}>
+                                                        <option key={habit.id} value={habit.id}>
                                                             {habit.habit_name}
-                                                        </SelectItem>
+                                                        </option>
                                                     ))}
-                                                </SelectContent>
-                                            </Select>
+                                                </select>
+                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                            </div>
                                         )}
 
                                         {newTask.context_type === "inventory" && (
-                                            <Select
-                                                value={newTask.context_id}
-                                                onValueChange={(v) => setNewTask({ ...newTask, context_id: v })}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select item..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
+                                            <div className="relative">
+                                                <select
+                                                    className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                    value={newTask.context_id || ""}
+                                                    onChange={(e) => setNewTask({ ...newTask, context_id: e.target.value })}
+                                                >
+                                                    <option value="" disabled>Select item...</option>
                                                     {inventoryItems.map(item => (
-                                                        <SelectItem key={item.id} value={item.id}>
+                                                        <option key={item.id} value={item.id}>
                                                             {item.item_name}
-                                                        </SelectItem>
+                                                        </option>
                                                     ))}
-                                                </SelectContent>
-                                            </Select>
+                                                </select>
+                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                            </div>
                                         )}
                                     </div>
 
@@ -734,21 +748,21 @@ export default function TasksPage() {
                                             <div className="grid grid-cols-2 gap-4">
                                                 {/* Budget selector - only for Expenses, not Income */}
                                                 {(newTask.context_type !== "finance" || newTask.finance_type === "expense") && (
-                                                    <Select
-                                                        value={newTask.budget_id}
-                                                        onValueChange={(v) => setNewTask({ ...newTask, budget_id: v })}
-                                                    >
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select budget..." />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
+                                                    <div className="relative">
+                                                        <select
+                                                            className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                            value={newTask.budget_id}
+                                                            onChange={(e) => setNewTask({ ...newTask, budget_id: e.target.value })}
+                                                        >
+                                                            <option value="" disabled>Select budget...</option>
                                                             {budgets.filter(b => b.type === "budget").map(budget => (
-                                                                <SelectItem key={budget.id} value={budget.id}>
+                                                                <option key={budget.id} value={budget.id}>
                                                                     {budget.name}
-                                                                </SelectItem>
+                                                                </option>
                                                             ))}
-                                                        </SelectContent>
-                                                    </Select>
+                                                        </select>
+                                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                                    </div>
                                                 )}
                                                 <Input
                                                     type="number"
@@ -775,16 +789,20 @@ export default function TasksPage() {
                                             Time Block
                                         </label>
                                         <div className="grid grid-cols-3 gap-4">
-                                            <TimePicker
-                                                value={newTask.start_time}
-                                                onChange={handleStartTimeChange}
-                                                placeholder="Start"
-                                            />
-                                            <TimePicker
-                                                value={newTask.end_time}
-                                                onChange={handleEndTimeChange}
-                                                placeholder="End"
-                                            />
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    type="time"
+                                                    value={newTask.start_time}
+                                                    onChange={(e) => handleStartTimeChange(e.target.value)}
+                                                    className="flex-1"
+                                                />
+                                                <Input
+                                                    type="time"
+                                                    value={newTask.end_time}
+                                                    onChange={(e) => handleEndTimeChange(e.target.value)}
+                                                    className="flex-1"
+                                                />
+                                            </div>
                                             <div className="relative">
                                                 <Input
                                                     type="number"
@@ -829,81 +847,87 @@ export default function TasksPage() {
                                             />
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-sm font-medium">Priority</label>
-                                                <Select
-                                                    value={editingTask.priority}
-                                                    onValueChange={(v) => setEditingTask({ ...editingTask, priority: v as Task["priority"] })}
-                                                >
-                                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="low">Low</SelectItem>
-                                                        <SelectItem value="medium">Medium</SelectItem>
-                                                        <SelectItem value="high">High</SelectItem>
-                                                        <SelectItem value="urgent">Urgent</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                            <div className="space-y-1">
+                                                <label className="text-xs text-muted-foreground">Priority</label>
+                                                <div className="relative">
+                                                    <select
+                                                        className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                        value={editingTask.priority}
+                                                        onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value as Task["priority"] })}
+                                                    >
+                                                        <option value="low">🟢 Low</option>
+                                                        <option value="medium">🟡 Medium</option>
+                                                        <option value="high">🟠 High</option>
+                                                        <option value="urgent">🔴 Urgent</option>
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                                </div>
                                             </div>
-                                            <div>
-                                                <label className="text-sm font-medium">Status</label>
-                                                <Select
-                                                    value={editingTask.status}
-                                                    onValueChange={(v) => setEditingTask({ ...editingTask, status: v as Task["status"] })}
-                                                >
-                                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="todo">To Do</SelectItem>
-                                                        <SelectItem value="in-progress">In Progress</SelectItem>
-                                                        <SelectItem value="done">Done</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                            <div className="space-y-1">
+                                                <label className="text-xs text-muted-foreground">Status</label>
+                                                <div className="relative">
+                                                    <select
+                                                        className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                        value={editingTask.status}
+                                                        onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value as Task["status"] })}
+                                                    >
+                                                        <option value="todo">To Do</option>
+                                                        <option value="in-progress">In Progress</option>
+                                                        <option value="done">Done</option>
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                                </div>
                                             </div>
                                         </div>
-                                        <div>
+                                        <div className="space-y-2">
                                             <label className="text-sm font-medium">Link to Module</label>
-                                            <Select
-                                                value={editingTask.context_type || "general"}
-                                                onValueChange={(v) => setEditingTask({ ...editingTask, context_type: v as Task["context_type"], context_id: "" })}
-                                            >
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="general">📁 General</SelectItem>
-                                                    <SelectItem value="study">📚 Study</SelectItem>
-                                                    <SelectItem value="finance">💰 Finance</SelectItem>
-                                                    <SelectItem value="habit">💪 Habit</SelectItem>
-                                                    <SelectItem value="inventory">📦 Inventory</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <div className="relative">
+                                                <select
+                                                    className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                    value={editingTask.context_type || "general"}
+                                                    onChange={(e) => setEditingTask({ ...editingTask, context_type: e.target.value as Task["context_type"], context_id: "" })}
+                                                >
+                                                    <option value="general">📁 General</option>
+                                                    <option value="study">📚 Study</option>
+                                                    <option value="finance">💰 Finance</option>
+                                                    <option value="habit">💪 Habit</option>
+                                                    <option value="inventory">📦 Inventory</option>
+                                                </select>
+                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                            </div>
 
                                             {editingTask.context_type === "study" && (
-                                                <Select
-                                                    value={editingTask.context_id || ""}
-                                                    onValueChange={(v) => setEditingTask({ ...editingTask, context_id: v })}
-                                                >
-                                                    <SelectTrigger className="mt-2"><SelectValue placeholder="Select chapter..." /></SelectTrigger>
-                                                    <SelectContent>
+                                                <div className="relative">
+                                                    <select
+                                                        className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 mt-2"
+                                                        value={editingTask.context_id || ""}
+                                                        onChange={(e) => setEditingTask({ ...editingTask, context_id: e.target.value })}
+                                                    >
+                                                        <option value="" disabled>Select chapter...</option>
                                                         {Object.entries(chaptersBySubject).map(([subject, chs]) => (
-                                                            <SelectGroup key={subject}>
-                                                                <SelectLabel>{subject}</SelectLabel>
-                                                                {chs.map(ch => <SelectItem key={ch.id} value={ch.id}>{ch.chapter_name}</SelectItem>)}
-                                                            </SelectGroup>
+                                                            <optgroup key={subject} label={subject}>
+                                                                {chs.map(ch => <option key={ch.id} value={ch.id}>{ch.name}</option>)}
+                                                            </optgroup>
                                                         ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                                </div>
                                             )}
 
                                             {editingTask.context_type === "inventory" && (
-                                                <Select
-                                                    value={editingTask.context_id || ""}
-                                                    onValueChange={(v) => setEditingTask({ ...editingTask, context_id: v })}
-                                                >
-                                                    <SelectTrigger className="mt-2"><SelectValue placeholder="Select item..." /></SelectTrigger>
-                                                    <SelectContent>
+                                                <div className="relative">
+                                                    <select
+                                                        className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 mt-2"
+                                                        value={editingTask.context_id || ""}
+                                                        onChange={(e) => setEditingTask({ ...editingTask, context_id: e.target.value })}
+                                                    >
+                                                        <option value="" disabled>Select item...</option>
                                                         {inventoryItems.map(item => (
-                                                            <SelectItem key={item.id} value={item.id}>{item.item_name}</SelectItem>
+                                                            <option key={item.id} value={item.id}>{item.item_name}</option>
                                                         ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                                </div>
                                             )}
 
                                             {editingTask.context_type === "finance" && (
@@ -918,16 +942,17 @@ export default function TasksPage() {
                                                     </div>
                                                     <div>
                                                         <label className="text-sm font-medium">Type</label>
-                                                        <Select
-                                                            value={editingTask.finance_type || "expense"}
-                                                            onValueChange={(v) => setEditingTask({ ...editingTask, finance_type: v as "income" | "expense" })}
-                                                        >
-                                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="expense">Expense</SelectItem>
-                                                                <SelectItem value="income">Income</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
+                                                        <div className="relative">
+                                                            <select
+                                                                className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                                value={editingTask.finance_type || "expense"}
+                                                                onChange={(e) => setEditingTask({ ...editingTask, finance_type: e.target.value as "income" | "expense" })}
+                                                            >
+                                                                <option value="expense">Expense</option>
+                                                                <option value="income">Income</option>
+                                                            </select>
+                                                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -935,10 +960,11 @@ export default function TasksPage() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-sm font-medium">Due Date</label>
-                                                <DatePicker
-                                                    value={editingTask.due_date || ""}
-                                                    onChange={(date) => setEditingTask({ ...editingTask, due_date: date })}
-                                                    placeholder="Due date"
+                                                <Input
+                                                    type="date"
+                                                    value={editingTask.due_date ? editingTask.due_date.split('T')[0] : ""}
+                                                    onChange={(e) => setEditingTask({ ...editingTask, due_date: e.target.value })}
+                                                    className="h-9"
                                                 />
                                             </div>
                                         </div>
@@ -1307,6 +1333,97 @@ export default function TasksPage() {
                     </motion.div>
                 )}
             </motion.div>
+            {/* Import Study Dialog */}
+            <Dialog open={importStudyOpen} onOpenChange={setImportStudyOpen}>
+                <DialogContent className="w-[95vw] max-w-md rounded-2xl sm:rounded-xl">
+                    <DialogHeader>
+                        <DialogTitle>Import from Study</DialogTitle>
+                        <DialogDescription>Select a part to add as a task.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                        {/* Subject */}
+                        <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground">Subject</label>
+                            <div className="relative">
+                                <select
+                                    className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={importSubjectId}
+                                    onChange={(e) => {
+                                        setImportSubjectId(e.target.value);
+                                        setImportChapterId("");
+                                    }}
+                                >
+                                    <option value="" disabled>Select Subject...</option>
+                                    {subjects.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* Chapter */}
+                        {importSubjectId && (
+                            <div className="space-y-1.5">
+                                <label className="text-xs text-muted-foreground">Chapter</label>
+                                <div className="relative">
+                                    <select
+                                        className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        value={importChapterId}
+                                        onChange={(e) => setImportChapterId(e.target.value)}
+                                    >
+                                        <option value="" disabled>Select Chapter...</option>
+                                        {(studyChaptersBySubject[importSubjectId] || []).map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Parts List */}
+                        {importChapterId && (
+                            <div className="space-y-2 mt-2">
+                                <label className="text-xs text-muted-foreground">Select a Part</label>
+                                <div className="max-h-[200px] overflow-y-auto space-y-1 border rounded-md p-1">
+                                    {(partsByChapter[importChapterId] || []).length === 0 ? (
+                                        <p className="text-sm text-muted-foreground p-2 text-center">No parts found.</p>
+                                    ) : (
+                                        (partsByChapter[importChapterId] || []).map(part => (
+                                            <button
+                                                key={part.id}
+                                                className="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-secondary/50 flex items-center justify-between group"
+                                                onClick={() => {
+                                                    setNewTask({
+                                                        ...defaultNewTask,
+                                                        title: part.name,
+                                                        context_type: "study",
+                                                        context_id: importChapterId,
+                                                        estimated_duration: String(part.estimated_minutes),
+                                                        start_time: part.scheduled_time || "",
+                                                        due_date: part.scheduled_date ? new Date(part.scheduled_date).toISOString() : "",
+                                                    });
+                                                    setImportStudyOpen(false);
+                                                    setImportSubjectId("");
+                                                    setImportChapterId("");
+                                                    setIsDialogOpen(true);
+                                                }}
+                                            >
+                                                <span>{part.name}</span>
+                                                <div className="flex items-center gap-2 opacity-60 text-xs">
+                                                    <span>{part.estimated_minutes}m</span>
+                                                    <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+                                                </div>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }
