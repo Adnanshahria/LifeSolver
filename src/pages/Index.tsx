@@ -624,35 +624,34 @@ Respond in this EXACT JSON format:
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 + i * 0.05, duration: 0.4 }}
-                        className={`group relative overflow-hidden rounded-xl p-3 bg-gradient-to-br ${item.gradient} border ${item.border} backdrop-blur-sm transition-all duration-300 hover:shadow-md cursor-default`}
+                        className={`group relative overflow-hidden rounded-xl p-3 bg-gradient-to-br ${item.gradient} border ${item.border} backdrop-blur-sm transition-all duration-300 hover:shadow-md cursor-default flex items-center justify-between`}
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className={`p-1.5 rounded-lg ${item.bg}`}>
-                            <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <div className={`p-1 rounded-md ${item.bg}`}>
+                              <item.icon className="w-3 h-3" style={{ color: item.color }} />
+                            </div>
+                            <span className="text-[10px] font-medium text-muted-foreground/80">{item.label}</span>
                           </div>
-                          <RadialProgress progress={pct} color={item.color} size={28} strokeWidth={3}>
-                            <span className="text-[8px] font-bold" style={{ color: item.color }}>{pct}%</span>
-                          </RadialProgress>
-                        </div>
 
-                        <div className="space-y-0.5">
-                          <h4 className="text-lg font-bold tracking-tight leading-none" style={{ color: item.color }}>
+                          <h4 className="text-xl font-bold tracking-tight leading-none" style={{ color: item.color }}>
                             {item.value}{item.suffix || ""}
                           </h4>
-                          <p className="text-[10px] text-muted-foreground font-medium truncate">{item.label}</p>
+
+                          {item.total !== null && (
+                            <p className="text-[9px] text-muted-foreground/60 font-medium mt-1">
+                              {item.value} / {item.total}
+                            </p>
+                          )}
                         </div>
 
-                        {item.total !== null && (
-                          <div className="mt-2 h-1 rounded-full bg-muted/20 overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${pct}%` }}
-                              transition={{ duration: 1, delay: 0.3 }}
-                              className="h-full rounded-full"
-                              style={{ backgroundColor: item.color }}
-                            />
-                          </div>
-                        )}
+                        <RadialProgress progress={pct} color={item.color} size={42} strokeWidth={4}>
+                          <span className="text-[9px] font-bold" style={{ color: item.color }}>{pct}%</span>
+                        </RadialProgress>
+
+                        {/* Glow orb */}
+                        <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity duration-500"
+                          style={{ backgroundColor: item.color }} />
                       </motion.div>
                     );
                   })}
