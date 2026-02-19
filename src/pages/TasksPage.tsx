@@ -1199,7 +1199,7 @@ export default function TasksPage() {
                 </div>
 
                 {/* Spacer for fixed toolbar on mobile */}
-                <div className="h-8 md:hidden" aria-hidden="true" />
+                <div className="h-9 md:hidden" aria-hidden="true" />
 
                 {/* Task Content - List or Kanban */}
                 <div className="space-y-3">
