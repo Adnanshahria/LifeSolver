@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { SEO } from "@/components/seo/SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import {
     Plus, Check, Clock, AlertTriangle, Trash2, Pin, PinOff, Edit,
-    BookOpen, Wallet, Heart, Folder, Calendar, Timer, DollarSign,
-    ChevronDown, Filter, LayoutGrid, List, ArrowUpDown, Archive, Zap, CalendarClock, Package, Boxes, CheckSquare, GraduationCap, MoreVertical, SlidersHorizontal
+    BookOpen, Wallet, Heart, Folder, Calendar as CalendarIcon, Timer, DollarSign,
+    ChevronDown, Filter, LayoutGrid, List, ArrowUpDown, Archive, Zap, CalendarClock, Package, Boxes, CheckSquare, GraduationCap, MoreVertical, SlidersHorizontal, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,62 @@ export default function TasksPage() {
     // Time adjustment popup state
     const [showTimeAdjustPopup, setShowTimeAdjustPopup] = useState(false);
     const [pendingDuration, setPendingDuration] = useState<string>("");
+
+    // Date View Mode - Default: Weekly
+    const [dateViewMode, setDateViewMode] = useState<"daily" | "weekly" | "monthly" | "custom" | "all">("weekly");
+    const getLocalDateStr = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    const [selectedDate, setSelectedDate] = useState(() => getLocalDateStr(new Date()));
+    const [customStartDate, setCustomStartDate] = useState(() => getLocalDateStr(new Date()));
+    const [customEndDate, setCustomEndDate] = useState(() => getLocalDateStr(new Date()));
+
+    // Helpers
+    const formatDate = (date: Date, style: "short" | "monthDay" | "monthYear" | "full" = "full") => {
+        switch (style) {
+            case "short": return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            case "monthDay": return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+            case "monthYear": return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+            default: return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        }
+    };
+
+    const getDateRange = () => {
+        const selected = new Date(selectedDate + "T12:00:00");
+        switch (dateViewMode) {
+            case "daily":
+                return { start: selectedDate, end: selectedDate };
+            case "weekly": {
+                // Default monday start
+                const dow = selected.getDay();
+                const offset = dow === 0 ? -6 : 1 - dow;
+                const start = new Date(selected);
+                start.setDate(selected.getDate() + offset);
+                const end = new Date(start);
+                end.setDate(start.getDate() + 6);
+                return { start: getLocalDateStr(start), end: getLocalDateStr(end) };
+            }
+            case "monthly": {
+                const ms = new Date(selected.getFullYear(), selected.getMonth(), 1);
+                const me = new Date(selected.getFullYear(), selected.getMonth() + 1, 0);
+                return { start: getLocalDateStr(ms), end: getLocalDateStr(me) };
+            }
+            case "custom":
+                return { start: customStartDate, end: customEndDate };
+            case "all":
+                return { start: "1970-01-01", end: "2099-12-31" };
+            default:
+                return { start: selectedDate, end: selectedDate };
+        }
+    };
+
+    const changeDate = (delta: number) => {
+        const d = new Date(selectedDate + "T12:00:00");
+        if (dateViewMode === "daily") d.setDate(d.getDate() + delta);
+        else if (dateViewMode === "weekly") d.setDate(d.getDate() + delta * 7);
+        else if (dateViewMode === "monthly") d.setMonth(d.getMonth() + delta);
+        setSelectedDate(getLocalDateStr(d));
+    };
 
     // Force list view on mobile (grid toggle is hidden on mobile)
     useEffect(() => {
@@ -459,23 +516,43 @@ export default function TasksPage() {
 
     // Filter tasks based on tabView, status filter, and context filter
     const filteredTasks = useMemo(() => {
-        const filtered = tasks.filter((task) => {
-            // Tab filter
-            let tabMatch = true;
-            if (tabView === "upcoming") tabMatch = isUpcoming(task);
-            else if (tabView === "active") {
-                // In Grid, show all active tasks including overdue.
-                // In List, exclude overdue because they are shown in a separate section.
-                tabMatch = isActive(task) && (viewMode === "grid" || !isOverdue(task));
-            }
-            else if (tabView === "archive") tabMatch = task.status === "done";
+        const range = getDateRange();
+        const start = new Date(range.start + "T00:00:00");
+        const end = new Date(range.end + "T23:59:59");
 
-            const statusMatch = filter === "all" || task.status === filter;
+        const filtered = tasks.filter((task) => {
+            // Context filter
             const contextMatch = contextFilter === "all" || task.context_type === contextFilter;
-            return tabMatch && statusMatch && contextMatch;
+
+            // Status and Tab Filter Integration
+            let statusMatch = true;
+            if (filter !== "all") statusMatch = task.status === filter;
+
+            // Date View Mode Logic
+            if (dateViewMode !== "all") {
+                // If Date Mode is active, prioritized date filtering
+                if (!task.due_date) return false; // Hide tasks without due date in strict date mode? Or maybe show them in 'active'? Let's hide them to be precise.
+
+                const dueDate = new Date(task.due_date + "T12:00:00"); // Use noon to avoid timezone slippage
+                const inRange = dueDate >= start && dueDate <= end;
+
+                // Still allow status filtering? Yes.
+                // Still allow context filtering? Yes.
+                return inRange && contextMatch && statusMatch;
+            } else {
+                // Classic "All Time" View - fallback to Tab View logic
+                let tabMatch = true;
+                if (tabView === "upcoming") tabMatch = isUpcoming(task);
+                else if (tabView === "active") {
+                    tabMatch = isActive(task) && (viewMode === "grid" || !isOverdue(task));
+                }
+                else if (tabView === "archive") tabMatch = task.status === "done";
+
+                return tabMatch && statusMatch && contextMatch;
+            }
         });
         return getSortedTasks(filtered, tabView);
-    }, [tasks, filter, contextFilter, tabView, sortBy, viewMode]);
+    }, [tasks, filter, contextFilter, tabView, sortBy, viewMode, dateViewMode, selectedDate, customStartDate, customEndDate]);
 
     // Overdue tasks for the Active tab
     const overdueTasks = useMemo(() => {
@@ -535,20 +612,41 @@ export default function TasksPage() {
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
-                                            <List className="w-3.5 h-3.5" />
-                                            View
+                                            <CalendarIcon className="w-3.5 h-3.5" />
+                                            Date View
                                         </h4>
-                                        <Select value={tabView} onValueChange={(v) => setTabView(v as typeof tabView)}>
+                                        <Select value={dateViewMode} onValueChange={(v) => setDateViewMode(v as typeof dateViewMode)}>
                                             <SelectTrigger className="w-full h-8 text-xs">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="upcoming">Soon ({tabCounts.upcoming})</SelectItem>
-                                                <SelectItem value="active">Active ({tabCounts.active})</SelectItem>
-                                                <SelectItem value="archive">Archive</SelectItem>
+                                                <SelectItem value="daily">Daily</SelectItem>
+                                                <SelectItem value="weekly">Weekly</SelectItem>
+                                                <SelectItem value="monthly">Monthly</SelectItem>
+                                                <SelectItem value="custom">Custom</SelectItem>
+                                                <SelectItem value="all">All Time</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
+
+                                    {dateViewMode === "all" && (
+                                        <div className="space-y-2">
+                                            <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+                                                <List className="w-3.5 h-3.5" />
+                                                Tab View
+                                            </h4>
+                                            <Select value={tabView} onValueChange={(v) => setTabView(v as typeof tabView)}>
+                                                <SelectTrigger className="w-full h-8 text-xs">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="upcoming">Soon ({tabCounts.upcoming})</SelectItem>
+                                                    <SelectItem value="active">Active ({tabCounts.active})</SelectItem>
+                                                    <SelectItem value="archive">Archive</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
 
                                     <div className="space-y-2">
                                         <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
@@ -613,6 +711,111 @@ export default function TasksPage() {
                                 </div>
                             </PopoverContent>
                         </Popover>
+
+                        {/* Divider */}
+                        <div className="h-4 w-px bg-border/40 mx-1" />
+
+                        {/* Date Controls - Showing only when NOT in "All Time" mode */}
+                        {dateViewMode !== "all" && (
+                            <div className="flex items-center gap-1 bg-secondary/20 p-0.5 rounded-xl border border-indigo-500/30">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-background/80 hover:shadow-sm" onClick={() => changeDate(-1)}>
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                </Button>
+
+                                {/* Center Date Display */}
+                                {dateViewMode === "daily" && (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className="text-xs font-medium px-2 h-7 rounded-md hover:bg-background/50 transition-colors whitespace-nowrap">
+                                                {formatDate(new Date(selectedDate + "T12:00:00"), "monthDay")}
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="center">
+                                            <CalendarComponent
+                                                mode="single"
+                                                selected={new Date(selectedDate + "T12:00:00")}
+                                                onSelect={(date) => date && setSelectedDate(getLocalDateStr(date))}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
+
+                                {dateViewMode === "weekly" && (
+                                    <span className="text-xs font-medium px-2 h-7 flex items-center whitespace-nowrap">
+                                        {(() => {
+                                            const range = getDateRange();
+                                            const start = new Date(range.start + "T12:00:00");
+                                            const end = new Date(range.end + "T12:00:00");
+                                            return `${formatDate(start, "short")} - ${formatDate(end, "short")}`;
+                                        })()}
+                                    </span>
+                                )}
+
+                                {dateViewMode === "monthly" && (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className="text-xs font-medium px-2 h-7 rounded-md hover:bg-background/50 transition-colors whitespace-nowrap">
+                                                {formatDate(new Date(selectedDate + "T12:00:00"), "monthYear")}
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="center">
+                                            <CalendarComponent
+                                                mode="single"
+                                                selected={new Date(selectedDate + "T12:00:00")}
+                                                onSelect={(date) => date && setSelectedDate(getLocalDateStr(date))}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
+
+                                {dateViewMode === "custom" && (
+                                    <div className="flex items-center gap-0.5">
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <button className="text-xs font-medium px-2 h-7 rounded-md bg-background/50 border border-border/50 hover:bg-background/80 transition-colors whitespace-nowrap flex items-center gap-1">
+                                                    <CalendarIcon className="w-3 h-3 opacity-70" />
+                                                    {formatDate(new Date(customStartDate + "T12:00:00"), "short")}
+                                                </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="center">
+                                                <CalendarComponent
+                                                    mode="single"
+                                                    selected={new Date(customStartDate + "T12:00:00")}
+                                                    onSelect={(date) => date && setCustomStartDate(getLocalDateStr(date))}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <span className="text-[10px] text-muted-foreground">-</span>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <button className="text-xs font-medium px-2 h-7 rounded-md bg-background/50 border border-border/50 hover:bg-background/80 transition-colors whitespace-nowrap flex items-center gap-1">
+                                                    <CalendarIcon className="w-3 h-3 opacity-70" />
+                                                    {formatDate(new Date(customEndDate + "T12:00:00"), "short")}
+                                                </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="center">
+                                                <CalendarComponent
+                                                    mode="single"
+                                                    selected={new Date(customEndDate + "T12:00:00")}
+                                                    onSelect={(date) => date && setCustomEndDate(getLocalDateStr(date))}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                )}
+
+                                <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-background/80 hover:shadow-sm" onClick={() => changeDate(1)}>
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* Import and Add Task Buttons */}
+                        <div className="flex-1" />
 
                         {/* Divider */}
                         <div className="h-4 w-px bg-border/40 mx-1" />
@@ -1280,7 +1483,7 @@ export default function TasksPage() {
                                                 <div className="flex items-center gap-2 sm:gap-3 mt-1.5 sm:mt-2 flex-wrap text-xs sm:text-sm text-muted-foreground">
                                                     {task.due_date && (
                                                         <span className="flex items-center gap-1">
-                                                            <Calendar className="w-3 h-3" />
+                                                            <CalendarIcon className="w-3 h-3" />
                                                             {task.due_date}
                                                         </span>
                                                     )}
@@ -1434,7 +1637,7 @@ export default function TasksPage() {
                                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                                 {task.due_date && (
                                                     <span className={`flex items-center gap-1.5 ${isOverdue(task) && task.status !== "done" ? "text-red-400 font-medium" : ""}`}>
-                                                        <Calendar className="w-3.5 h-3.5" />
+                                                        <CalendarIcon className="w-3.5 h-3.5" />
                                                         {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                     </span>
                                                 )}
@@ -1504,7 +1707,7 @@ export default function TasksPage() {
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium truncate">{task.title}</p>
                                                 <p className="text-xs text-red-400 flex items-center gap-1">
-                                                    <Calendar className="w-3 h-3" />
+                                                    <CalendarIcon className="w-3 h-3" />
                                                     Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : "N/A"}
                                                 </p>
                                             </div>
