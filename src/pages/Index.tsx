@@ -5,7 +5,7 @@ import {
   Wallet, ListTodo, Target, TrendingUp, CalendarDays, PiggyBank,
   BookOpen, Flame, BarChart3, Activity, ArrowUpRight, ArrowDownRight,
   GraduationCap, CheckCircle2, Clock, Zap, Brain, Sparkles, Loader2,
-  AlertCircle, Lightbulb, ChevronRight, MoreHorizontal, Eye
+  AlertCircle, Lightbulb, ChevronRight, MoreHorizontal, Eye, ChevronDown
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
@@ -62,9 +62,59 @@ const fadeUp = {
   show: { opacity: 1, y: 0, transition: { duration: 0.45 } },
 };
 
+const CollapsibleContent = ({ isExpanded, isMobile, children }: { isExpanded: boolean, isMobile: boolean, children: React.ReactNode }) => (
+  <AnimatePresence>
+    {(!isMobile || isExpanded) && (
+      <motion.div
+        initial={{ height: 0, opacity: 0 }}
+        animate={{ height: "auto", opacity: 1 }}
+        exit={{ height: 0, opacity: 0 }}
+        transition={{ duration: 0.3 }}
+        className="overflow-hidden"
+      >
+        {children}
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
+
+const ExpandButton = ({ isExpanded, onClick, isMobile }: { isExpanded: boolean, onClick: () => void, isMobile: boolean }) => isMobile ? (
+  <button
+    onClick={(e) => { e.stopPropagation(); onClick(); }}
+    className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors ml-2"
+  >
+    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+  </button>
+) : null;
+
+
 const Index = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
+
+  // Mobile check and expand state
+  const [isMobile, setIsMobile] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    "activity": true,
+    "spending": true,
+    "tasks": true,
+    "habits": true,
+    "study": true,
+    "transactions": true,
+    "ai_summary": true
+  });
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
   const { balance, totalIncome, totalExpenses, expensesByCategory, expenses, regularEntries } = useFinance();
   const { totalSavings, budgetRemaining, primaryBudget, savingsGoals } = useBudget();
   const { tasks } = useTasks();
@@ -213,19 +263,11 @@ Respond in this EXACT JSON format:
   // Stat card data
   const statCards = [
     {
-      icon: Wallet, label: "Balance", value: `${balance >= 0 ? "" : "-"}${formatCurrency(balance)}`,
-      sub: `Income: ৳${totalIncome.toLocaleString()}`,
-      accent: "#3b82f6", gradient: "from-blue-500/20 via-blue-400/10 to-sky-500/5",
-      borderColor: "border-blue-200 dark:border-blue-500/25",
-      trend: balance >= 0 ? { value: Math.round((balance / (totalIncome || 1)) * 100), up: true } : null,
-    },
-    {
       icon: Target, label: "Budget Left", value: `৳${budgetRemaining.toLocaleString()}`,
       sub: primaryBudget?.name || "No budget",
       accent: "#f59e0b", gradient: "from-amber-500/20 via-amber-400/10 to-yellow-500/5",
       borderColor: "border-amber-200 dark:border-amber-500/25",
       trend: budgetRemaining >= 0 ? { value: Math.round((budgetRemaining / (primaryBudget?.target_amount || 1)) * 100), up: true } : null,
-      className: "hidden sm:block",
     },
     {
       icon: PiggyBank, label: "Total Savings", value: `৳${totalSavings.toLocaleString()}`,
@@ -233,6 +275,14 @@ Respond in this EXACT JSON format:
       accent: "#10b981", gradient: "from-emerald-500/20 via-emerald-400/10 to-green-500/5",
       borderColor: "border-emerald-200 dark:border-emerald-500/25",
       trend: null,
+      className: "hidden sm:block",
+    },
+    {
+      icon: Wallet, label: "Balance", value: `${balance >= 0 ? "" : "-"}${formatCurrency(balance)}`,
+      sub: `Income: ৳${totalIncome.toLocaleString()}`,
+      accent: "#3b82f6", gradient: "from-blue-500/20 via-blue-400/10 to-sky-500/5",
+      borderColor: "border-blue-200 dark:border-blue-500/25",
+      trend: balance >= 0 ? { value: Math.round((balance / (totalIncome || 1)) * 100), up: true } : null,
       className: "hidden sm:block",
     },
     {
@@ -350,67 +400,70 @@ Respond in this EXACT JSON format:
                     <><Sparkles className="w-3.5 h-3.5" /> {aiSummary ? "Refresh" : "Generate"}</>
                   )}
                 </button>
+                <ExpandButton isExpanded={!!expandedSections["ai_summary"]} onClick={() => toggleSection("ai_summary")} isMobile={isMobile} />
               </div>
 
-              <AnimatePresence mode="wait">
-                {summaryError && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="p-3 rounded-xl bg-red-500/8 border border-red-500/15 text-red-400 text-sm"
-                  >
-                    {summaryError}
-                  </motion.div>
-                )}
+              <CollapsibleContent isExpanded={!!expandedSections["ai_summary"]} isMobile={isMobile}>
+                <AnimatePresence mode="wait">
+                  {summaryError && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="p-3 rounded-xl bg-red-500/8 border border-red-500/15 text-red-400 text-sm"
+                    >
+                      {summaryError}
+                    </motion.div>
+                  )}
 
-                {aiSummary ? (
-                  <motion.div key="summary" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="space-y-3"
-                  >
-                    <p className="text-sm text-foreground/80 leading-relaxed">{aiSummary.summary}</p>
-                    <div className="grid sm:grid-cols-2 gap-2.5">
-                      {aiSummary.alerts.length > 0 && (
-                        <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
-                          <div className="flex items-center gap-1.5 mb-1.5">
-                            <AlertCircle className="w-3 h-3 text-amber-400" />
-                            <span className="text-[11px] font-semibold text-amber-400">Attention</span>
+                  {aiSummary ? (
+                    <motion.div key="summary" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="space-y-3"
+                    >
+                      <p className="text-sm text-foreground/80 leading-relaxed">{aiSummary.summary}</p>
+                      <div className="grid sm:grid-cols-2 gap-2.5">
+                        {aiSummary.alerts.length > 0 && (
+                          <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <AlertCircle className="w-3 h-3 text-amber-400" />
+                              <span className="text-[11px] font-semibold text-amber-400">Attention</span>
+                            </div>
+                            <ul className="space-y-0.5">
+                              {aiSummary.alerts.map((a, i) => (
+                                <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5">
+                                  <span className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 shrink-0" />{a}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                          <ul className="space-y-0.5">
-                            {aiSummary.alerts.map((a, i) => (
-                              <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5">
-                                <span className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 shrink-0" />{a}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {aiSummary.tips.length > 0 && (
-                        <div className="p-3 rounded-xl bg-sky-500/5 border border-sky-500/10">
-                          <div className="flex items-center gap-1.5 mb-1.5">
-                            <Lightbulb className="w-3 h-3 text-sky-400" />
-                            <span className="text-[11px] font-semibold text-sky-400">Suggestions</span>
+                        )}
+                        {aiSummary.tips.length > 0 && (
+                          <div className="p-3 rounded-xl bg-sky-500/5 border border-sky-500/10">
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <Lightbulb className="w-3 h-3 text-sky-400" />
+                              <span className="text-[11px] font-semibold text-sky-400">Suggestions</span>
+                            </div>
+                            <ul className="space-y-0.5">
+                              {aiSummary.tips.map((t, i) => (
+                                <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5">
+                                  <span className="w-1 h-1 rounded-full bg-sky-400 mt-1.5 shrink-0" />{t}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                          <ul className="space-y-0.5">
-                            {aiSummary.tips.map((t, i) => (
-                              <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5">
-                                <span className="w-1 h-1 rounded-full bg-sky-400 mt-1.5 shrink-0" />{t}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                ) : !isSummaryLoading && !summaryError && (
-                  <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="flex flex-col items-center justify-center py-8 text-center"
-                  >
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500/10 to-indigo-500/10 flex items-center justify-center mb-3">
-                      <Sparkles className="w-6 h-6 text-sky-400/40" />
-                    </div>
-                    <p className="text-sm text-muted-foreground font-medium">Click "Generate" for your AI-powered daily briefing</p>
-                    <p className="text-[10px] text-muted-foreground/50 mt-1">Orbit analyzes tasks, habits, finances & study data</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                        )}
+                      </div>
+                    </motion.div>
+                  ) : !isSummaryLoading && !summaryError && (
+                    <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="flex flex-col items-center justify-center py-8 text-center"
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500/10 to-indigo-500/10 flex items-center justify-center mb-3">
+                        <Sparkles className="w-6 h-6 text-sky-400/40" />
+                      </div>
+                      <p className="text-sm text-muted-foreground font-medium">Click "Generate" for your AI-powered daily briefing</p>
+                      <p className="text-[10px] text-muted-foreground/50 mt-1">Orbit analyzes tasks, habits, finances & study data</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </CollapsibleContent>
             </div>
           </div>
         </motion.div>
@@ -432,166 +485,180 @@ Respond in this EXACT JSON format:
                     <p className="text-[10px] text-muted-foreground">This month's overview</p>
                   </div>
                 </div>
+                <ExpandButton isExpanded={!!expandedSections["spending"]} onClick={() => toggleSection("spending")} isMobile={isMobile} />
               </div>
 
-              {/* Hero amount */}
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-2xl font-bold text-violet-600 dark:text-violet-400">৳{thisMonthTotal.toLocaleString()}</span>
-                {expenseTrend !== 0 && (
-                  <Badge className={`text-[9px] rounded-full px-2 h-5 font-semibold ${expenseTrend > 0
-                    ? "bg-red-500/10 text-red-500 border-red-300/30 dark:border-red-500/20 hover:bg-red-500/15"
-                    : "bg-green-500/10 text-green-500 border-green-300/30 dark:border-green-500/20 hover:bg-green-500/15"
-                    }`}>
-                    {expenseTrend > 0 ? "↑" : "↓"} {Math.abs(expenseTrend)}%
-                  </Badge>
-                )}
-              </div>
-              <p className="text-[10px] text-muted-foreground/60 mb-4">vs ৳{lastMonthTotal.toLocaleString()} last month</p>
-
-              {expenseChartData.length > 0 ? (
-                <div className="relative h-44 -mx-2 mb-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={expenseChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={72}
-                        paddingAngle={3} dataKey="value" stroke="none" cornerRadius={4}>
-                        {expenseChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: "12px", boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
-                        formatter={(value: number) => [`৳${value.toLocaleString()}`, ""]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  {/* Center label */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-[10px] text-muted-foreground/60">Total</span>
-                    <span className="text-sm font-bold text-violet-600 dark:text-violet-400">৳{thisMonthTotal.toLocaleString()}</span>
-                  </div>
+              <CollapsibleContent isExpanded={!!expandedSections["spending"]} isMobile={isMobile}>
+                {/* Hero amount */}
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-2xl font-bold text-violet-600 dark:text-violet-400">৳{thisMonthTotal.toLocaleString()}</span>
+                  {expenseTrend !== 0 && (
+                    <Badge className={`text-[9px] rounded-full px-2 h-5 font-semibold ${expenseTrend > 0
+                      ? "bg-red-500/10 text-red-500 border-red-300/30 dark:border-red-500/20 hover:bg-red-500/15"
+                      : "bg-green-500/10 text-green-500 border-green-300/30 dark:border-green-500/20 hover:bg-green-500/15"
+                      }`}>
+                      {expenseTrend > 0 ? "↑" : "↓"} {Math.abs(expenseTrend)}%
+                    </Badge>
+                  )}
                 </div>
-              ) : (
-                <div className="h-44 flex flex-col items-center justify-center mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-2">
-                    <BarChart3 className="w-6 h-6 text-violet-400/40" />
-                  </div>
-                  <p className="text-xs text-muted-foreground">No expenses this month</p>
-                </div>
-              )}
+                <p className="text-[10px] text-muted-foreground/60 mb-4">vs ৳{lastMonthTotal.toLocaleString()} last month</p>
 
-              {/* Category breakdown with bars */}
-              <div className="space-y-2.5">
-                {expenseChartData.slice(0, 4).map((cat, i) => {
-                  const pct = thisMonthTotal > 0 ? Math.round((cat.value / thisMonthTotal) * 100) : 0;
-                  return (
-                    <div key={cat.name}>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                          <span className="text-xs font-medium">{cat.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground">{pct}%</span>
-                          <span className="text-xs font-bold">৳{cat.value.toLocaleString()}</span>
-                        </div>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-violet-100/40 dark:bg-violet-900/20 overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${pct}%` }}
-                          transition={{ duration: 0.8, delay: 0.2 + i * 0.1 }}
-                          className="h-full rounded-full"
-                          style={{ backgroundColor: cat.color }}
+                {expenseChartData.length > 0 ? (
+                  <div className="relative h-44 -mx-2 mb-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={expenseChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={72}
+                          paddingAngle={3} dataKey="value" stroke="none" cornerRadius={4}>
+                          {expenseChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: "12px", boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
+                          formatter={(value: number) => [`৳${value.toLocaleString()}`, ""]}
                         />
-                      </div>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    {/* Center label */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-[10px] text-muted-foreground/60">Total</span>
+                      <span className="text-sm font-bold text-violet-600 dark:text-violet-400">৳{thisMonthTotal.toLocaleString()}</span>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                ) : (
+                  <div className="h-44 flex flex-col items-center justify-center mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-2">
+                      <BarChart3 className="w-6 h-6 text-violet-400/40" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">No expenses this month</p>
+                  </div>
+                )}
+
+                {/* Category breakdown with bars */}
+                <div className="space-y-2.5">
+                  {expenseChartData.slice(0, 4).map((cat, i) => {
+                    const pct = thisMonthTotal > 0 ? Math.round((cat.value / thisMonthTotal) * 100) : 0;
+                    return (
+                      <div key={cat.name}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                            <span className="text-xs font-medium">{cat.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground">{pct}%</span>
+                            <span className="text-xs font-bold">৳{cat.value.toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-violet-100/40 dark:bg-violet-900/20 overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.8, delay: 0.2 + i * 0.1 }}
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: cat.color }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
             </div>
           </div>
-
         </motion.div>
 
         {/* ===== ACTIVITY OVERVIEW (Moved inside grid for mobile ordering) ===== */}
         <motion.div variants={fadeUp} className="lg:col-span-12 order-2 lg:order-3">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Activity className="w-4 h-4 text-primary" />
-            </div>
-            <h3 className="font-semibold text-sm">Activity Overview</h3>
-          </div>
+          <div className="rounded-xl sm:rounded-2xl border-2 border-primary/10 bg-gradient-to-br from-primary/5 via-card/80 to-transparent backdrop-blur-sm p-4 sm:p-5 relative overflow-hidden">
+            {/* Glow orb */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/5 blur-3xl" />
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-            {[
-              {
-                label: "Tasks Done", value: completedTasks.length, total: allTasks.length,
-                color: "#3b82f6", icon: CheckCircle2,
-                gradient: "from-blue-500/15 via-blue-400/5 to-transparent",
-                border: "border-blue-200 dark:border-blue-500/20",
-                bg: "bg-blue-500/8",
-              },
-              {
-                label: "Habits Today", value: habitsCompletedToday, total: allHabits.length,
-                color: "#10b981", icon: Flame,
-                gradient: "from-emerald-500/15 via-emerald-400/5 to-transparent",
-                border: "border-emerald-200 dark:border-emerald-500/20",
-                bg: "bg-emerald-500/8",
-              },
-              {
-                label: "Study Progress", value: studyProgress, total: 100,
-                color: "#8b5cf6", icon: GraduationCap, suffix: "%",
-                gradient: "from-violet-500/15 via-violet-400/5 to-transparent",
-                border: "border-violet-200 dark:border-violet-500/20",
-                bg: "bg-violet-500/8",
-              },
-              {
-                label: "Notes Written", value: (notes || []).length, total: null,
-                color: "#f59e0b", icon: BookOpen,
-                gradient: "from-amber-500/15 via-amber-400/5 to-transparent",
-                border: "border-amber-200 dark:border-amber-500/20",
-                bg: "bg-amber-500/8",
-              },
-            ].map((item) => {
-              const pct = item.total ? Math.round((item.value / item.total) * 100) : 100;
-              return (
-                <motion.div key={item.label} variants={fadeUp}
-                  className={`group relative overflow-hidden rounded-lg sm:rounded-2xl p-2 sm:p-4 bg-gradient-to-br ${item.gradient} border-2 ${item.border} backdrop-blur-sm transition-all duration-300 hover:shadow-lg cursor-default`}
-                >
-                  {/* Glow orb */}
-                  <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-15 blur-2xl group-hover:opacity-30 transition-opacity duration-500"
-                    style={{ backgroundColor: item.color }} />
-
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-1.5 sm:mb-3">
-                      <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${item.bg}`}>
-                        <item.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: item.color }} />
-                      </div>
-                      <RadialProgress progress={pct} color={item.color} size={36} strokeWidth={3}>
-                        <span className="text-[8px] sm:text-[9px] font-bold" style={{ color: item.color }}>{pct}%</span>
-                      </RadialProgress>
-                    </div>
-
-                    <h4 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: item.color }}>
-                      {item.value}{item.suffix || ""}
-                    </h4>
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium mt-0.5">{item.label}</p>
-                    {item.total !== null && (
-                      <div className="mt-1.5 sm:mt-2">
-                        <div className="h-1 sm:h-1.5 rounded-full bg-muted/20 overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ duration: 1, delay: 0.3 }}
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: item.color }}
-                          />
-                        </div>
-                        <p className="text-[8px] sm:text-[9px] text-muted-foreground/50 mt-0.5 sm:mt-1">{item.value} of {item.total}</p>
-                      </div>
-                    )}
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-primary/10 shadow-sm shadow-primary/5">
+                    <Activity className="w-4 h-4 text-primary" />
                   </div>
-                </motion.div>
-              );
-            })}
+                  <div>
+                    <h3 className="font-semibold text-sm">Activity Overview</h3>
+                    <p className="text-[10px] text-muted-foreground">Your daily progress</p>
+                  </div>
+                </div>
+                <ExpandButton isExpanded={!!expandedSections["activity"]} onClick={() => toggleSection("activity")} isMobile={isMobile} />
+              </div>
+
+              <CollapsibleContent isExpanded={!!expandedSections["activity"]} isMobile={isMobile}>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                  {[
+                    {
+                      label: "Tasks Done", value: completedTasks.length, total: allTasks.length,
+                      color: "#3b82f6", icon: CheckCircle2,
+                      gradient: "from-blue-500/15 via-blue-400/5 to-transparent",
+                      border: "border-blue-200 dark:border-blue-500/20",
+                      bg: "bg-blue-500/10",
+                    },
+                    {
+                      label: "Habits Today", value: habitsCompletedToday, total: allHabits.length,
+                      color: "#10b981", icon: Flame,
+                      gradient: "from-emerald-500/15 via-emerald-400/5 to-transparent",
+                      border: "border-emerald-200 dark:border-emerald-500/20",
+                      bg: "bg-emerald-500/10",
+                    },
+                    {
+                      label: "Study Progress", value: studyProgress, total: 100,
+                      color: "#8b5cf6", icon: GraduationCap, suffix: "%",
+                      gradient: "from-violet-500/15 via-violet-400/5 to-transparent",
+                      border: "border-violet-200 dark:border-violet-500/20",
+                      bg: "bg-violet-500/10",
+                    },
+                    {
+                      label: "Notes Written", value: (notes || []).length, total: null,
+                      color: "#f59e0b", icon: BookOpen,
+                      gradient: "from-amber-500/15 via-amber-400/5 to-transparent",
+                      border: "border-amber-200 dark:border-amber-500/20",
+                      bg: "bg-amber-500/10",
+                    },
+                  ].map((item, i) => {
+                    const pct = item.total ? Math.round((item.value / item.total) * 100) : 100;
+                    return (
+                      <motion.div key={item.label}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 + i * 0.05, duration: 0.4 }}
+                        className={`group relative overflow-hidden rounded-xl p-3 bg-gradient-to-br ${item.gradient} border ${item.border} backdrop-blur-sm transition-all duration-300 hover:shadow-md cursor-default`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className={`p-1.5 rounded-lg ${item.bg}`}>
+                            <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
+                          </div>
+                          <RadialProgress progress={pct} color={item.color} size={28} strokeWidth={3}>
+                            <span className="text-[8px] font-bold" style={{ color: item.color }}>{pct}%</span>
+                          </RadialProgress>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <h4 className="text-lg font-bold tracking-tight leading-none" style={{ color: item.color }}>
+                            {item.value}{item.suffix || ""}
+                          </h4>
+                          <p className="text-[10px] text-muted-foreground font-medium truncate">{item.label}</p>
+                        </div>
+
+                        {item.total !== null && (
+                          <div className="mt-2 h-1 rounded-full bg-muted/20 overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${pct}%` }}
+                              transition={{ duration: 1, delay: 0.3 }}
+                              className="h-full rounded-full"
+                              style={{ backgroundColor: item.color }}
+                            />
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </div>
           </div>
         </motion.div>
       </motion.div>
@@ -622,49 +689,52 @@ Respond in this EXACT JSON format:
                   <RadialProgress progress={taskCompletionRate} color="#3b82f6" size={36} strokeWidth={3.5}>
                     <span className="text-[8px] font-bold text-blue-500">{taskCompletionRate}%</span>
                   </RadialProgress>
+                  <ExpandButton isExpanded={!!expandedSections["tasks"]} onClick={() => toggleSection("tasks")} isMobile={isMobile} />
                 </div>
               </div>
 
-              {/* Progress bar */}
-              <div className="h-1 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden mb-4 mt-3">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${taskCompletionRate}%` }}
-                  transition={{ duration: 0.8, delay: 0.3 }}
-                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-sky-400" />
-              </div>
+              <CollapsibleContent isExpanded={!!expandedSections["tasks"]} isMobile={isMobile}>
+                {/* Progress bar */}
+                <div className="h-1 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden mb-4 mt-3">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${taskCompletionRate}%` }}
+                    transition={{ duration: 0.8, delay: 0.3 }}
+                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-sky-400" />
+                </div>
 
-              <div className="space-y-1">
-                {pendingTasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
-                    <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center mb-2">
-                      <CheckCircle2 className="w-6 h-6 text-green-500" />
+                <div className="space-y-1">
+                  {pendingTasks.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                      <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center mb-2">
+                        <CheckCircle2 className="w-6 h-6 text-green-500" />
+                      </div>
+                      <p className="text-sm font-medium">All clear! 🎉</p>
                     </div>
-                    <p className="text-sm font-medium">All clear! 🎉</p>
-                  </div>
-                ) : (
-                  pendingTasks.slice(0, 5).map((task, i) => (
-                    <motion.div key={task.id}
-                      initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 * i }}
-                      className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 transition-all group cursor-default"
-                    >
-                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ring-2 ${task.priority === "urgent" ? "bg-red-500 ring-red-500/30" :
-                        task.priority === "high" ? "bg-red-400 ring-red-400/20" :
-                          task.priority === "medium" ? "bg-amber-400 ring-amber-400/20" :
-                            "bg-blue-300 ring-blue-300/20"
-                        }`} />
-                      <span className="text-sm truncate flex-1 font-medium">{task.title}</span>
-                      {task.due_date && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-blue-500/8 text-blue-500 dark:text-blue-400 font-medium shrink-0">
-                          {formatTaskDate(task.due_date)}
-                        </span>
-                      )}
-                    </motion.div>
-                  ))
-                )}
-              </div>
+                  ) : (
+                    pendingTasks.slice(0, 5).map((task, i) => (
+                      <motion.div key={task.id}
+                        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 * i }}
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 transition-all group cursor-default"
+                      >
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ring-2 ${task.priority === "urgent" ? "bg-red-500 ring-red-500/30" :
+                          task.priority === "high" ? "bg-red-400 ring-red-400/20" :
+                            task.priority === "medium" ? "bg-amber-400 ring-amber-400/20" :
+                              "bg-blue-300 ring-blue-300/20"
+                          }`} />
+                        <span className="text-sm truncate flex-1 font-medium">{task.title}</span>
+                        {task.due_date && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-blue-500/8 text-blue-500 dark:text-blue-400 font-medium shrink-0">
+                            {formatTaskDate(task.due_date)}
+                          </span>
+                        )}
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </CollapsibleContent>
             </div>
           </div>
-        </motion.div >
+        </motion.div>
 
         {/* ── Habits ── */}
         <motion.div variants={fadeUp}>
@@ -683,58 +753,63 @@ Respond in this EXACT JSON format:
                     <p className="text-[10px] text-muted-foreground">{habitsCompletedToday}/{allHabits.length} completed · 🔥 Best: {bestStreak}</p>
                   </div>
                 </div>
-                <RadialProgress progress={habitCompletionRate} color="#f97316" size={36} strokeWidth={3.5}>
-                  <span className="text-[8px] font-bold text-orange-500">{habitCompletionRate}%</span>
-                </RadialProgress>
+                <div className="flex items-center gap-1.5">
+                  <RadialProgress progress={habitCompletionRate} color="#f97316" size={36} strokeWidth={3.5}>
+                    <span className="text-[8px] font-bold text-orange-500">{habitCompletionRate}%</span>
+                  </RadialProgress>
+                  <ExpandButton isExpanded={!!expandedSections["habits"]} onClick={() => toggleSection("habits")} isMobile={isMobile} />
+                </div>
               </div>
 
-              {/* Progress bar */}
-              <div className="h-1 rounded-full bg-orange-100 dark:bg-orange-900/30 overflow-hidden mb-4 mt-3">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${habitCompletionRate}%` }}
-                  transition={{ duration: 0.8, delay: 0.3 }}
-                  className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
-              </div>
+              <CollapsibleContent isExpanded={!!expandedSections["habits"]} isMobile={isMobile}>
+                {/* Progress bar */}
+                <div className="h-1 rounded-full bg-orange-100 dark:bg-orange-900/30 overflow-hidden mb-4 mt-3">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${habitCompletionRate}%` }}
+                    transition={{ duration: 0.8, delay: 0.3 }}
+                    className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
+                </div>
 
-              <div className="space-y-1">
-                {allHabits.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-2">
-                      <Flame className="w-6 h-6 text-orange-400" />
+                <div className="space-y-1">
+                  {allHabits.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                      <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-2">
+                        <Flame className="w-6 h-6 text-orange-400" />
+                      </div>
+                      <p className="text-sm font-medium">No habits yet</p>
                     </div>
-                    <p className="text-sm font-medium">No habits yet</p>
-                  </div>
-                ) : (
-                  allHabits.slice(0, 5).map((habit, i) => {
-                    const done = habit.last_completed_date?.split("T")[0] === todayStr;
-                    return (
-                      <motion.div key={habit.id}
-                        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 * i }}
-                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-orange-500/5 dark:hover:bg-orange-500/10 transition-all cursor-default"
-                      >
-                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition-all ${done
-                          ? "bg-gradient-to-br from-green-400 to-emerald-500 shadow-md shadow-green-500/25"
-                          : "bg-muted/30 border-2 border-muted-foreground/15"
-                          }`}>
-                          {done && <CheckCircle2 className="w-3 h-3 text-white" />}
-                        </div>
-                        <span className={`text-sm truncate flex-1 font-medium ${done ? "text-muted-foreground line-through" : ""}`}>
-                          {habit.habit_name}
-                        </span>
-                        {habit.streak_count > 0 && (
-                          <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500/15 to-amber-500/10 border border-orange-300/30 dark:border-orange-500/20">
-                            <Flame className="w-3 h-3 text-orange-500 fill-current" />
-                            <span className="text-[10px] font-bold text-orange-500">{habit.streak_count}</span>
+                  ) : (
+                    allHabits.slice(0, 5).map((habit, i) => {
+                      const done = habit.last_completed_date?.split("T")[0] === todayStr;
+                      return (
+                        <motion.div key={habit.id}
+                          initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1 * i }}
+                          className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-orange-500/5 dark:hover:bg-orange-500/10 transition-all cursor-default"
+                        >
+                          <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition-all ${done
+                            ? "bg-gradient-to-br from-green-400 to-emerald-500 shadow-md shadow-green-500/25"
+                            : "bg-muted/30 border-2 border-muted-foreground/15"
+                            }`}>
+                            {done && <CheckCircle2 className="w-3 h-3 text-white" />}
                           </div>
-                        )}
-                      </motion.div>
-                    );
-                  })
-                )}
-              </div>
+                          <span className={`text-sm truncate flex-1 font-medium ${done ? "text-muted-foreground line-through" : ""}`}>
+                            {habit.habit_name}
+                          </span>
+                          {habit.streak_count > 0 && (
+                            <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500/15 to-amber-500/10 border border-orange-300/30 dark:border-orange-500/20">
+                              <Flame className="w-3 h-3 text-orange-500 fill-current" />
+                              <span className="text-[10px] font-bold text-orange-500">{habit.streak_count}</span>
+                            </div>
+                          )}
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </div>
+              </CollapsibleContent>
             </div>
           </div>
-        </motion.div >
+        </motion.div>
 
         {/* ── Study + Transactions ── */}
         <motion.div variants={fadeUp} className="space-y-4">
@@ -755,85 +830,93 @@ Respond in this EXACT JSON format:
                   <Badge className="text-[9px] rounded-full bg-violet-500/10 text-violet-500 border-violet-300/30 dark:border-violet-500/20 hover:bg-violet-500/15">
                     {completedChapters}/{allChapters.length}
                   </Badge>
+                  <ExpandButton isExpanded={!!expandedSections["study"]} onClick={() => toggleSection("study")} isMobile={isMobile} />
                 </div>
               </div>
 
-              {subjectProgressList.length > 0 ? (
-                <div className="space-y-3">
-                  {subjectProgressList.slice(0, 3).map((sp, i) => (
-                    <div key={sp.subject}>
-                      <div className="flex justify-between text-xs mb-1.5">
-                        <span className="font-semibold">{sp.subject}</span>
-                        <span className="font-bold text-violet-500">{sp.progress}%</span>
+              <CollapsibleContent isExpanded={!!expandedSections["study"]} isMobile={isMobile}>
+                {subjectProgressList.length > 0 ? (
+                  <div className="space-y-3">
+                    {subjectProgressList.slice(0, 3).map((sp, i) => (
+                      <div key={sp.subject}>
+                        <div className="flex justify-between text-xs mb-1.5">
+                          <span className="font-semibold">{sp.subject}</span>
+                          <span className="font-bold text-violet-500">{sp.progress}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-violet-100/50 dark:bg-violet-900/20 overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${sp.progress}%` }}
+                            transition={{ duration: 1, delay: 0.3 + i * 0.15 }}
+                            className="h-full rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 shadow-sm shadow-violet-500/20"
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 rounded-full bg-violet-100/50 dark:bg-violet-900/20 overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${sp.progress}%` }}
-                          transition={{ duration: 1, delay: 0.3 + i * 0.15 }}
-                          className="h-full rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 shadow-sm shadow-violet-500/20"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">No study data</p>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-4">No study data</p>
+                )}
+              </CollapsibleContent>
             </div>
-          </div >
+          </div>
 
           {/* Recent Transactions */}
           <div className="rounded-xl sm:rounded-2xl border-2 border-cyan-200 dark:border-cyan-500/20 bg-gradient-to-br from-cyan-50/30 via-card/80 to-teal-50/20 dark:from-cyan-950/15 dark:via-card/80 dark:to-teal-950/10 backdrop-blur-sm p-4 sm:p-5 relative overflow-hidden">
             <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full bg-cyan-500 opacity-[0.05] blur-3xl" />
 
             <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 rounded-xl bg-cyan-500/15 shadow-sm shadow-cyan-500/10">
-                  <Clock className="w-4 h-4 text-cyan-500" />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-cyan-500/15 shadow-sm shadow-cyan-500/10">
+                    <Clock className="w-4 h-4 text-cyan-500" />
+                  </div>
+                  <h3 className="font-semibold text-sm">Transactions</h3>
                 </div>
-                <h3 className="font-semibold text-sm">Transactions</h3>
+                <ExpandButton isExpanded={!!expandedSections["transactions"]} onClick={() => toggleSection("transactions")} isMobile={isMobile} />
               </div>
 
-              <div className="space-y-1.5">
-                {recentTransactions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">No transactions</p>
-                ) : (
-                  recentTransactions.slice(0, 4).map((tx, i) => (
-                    <motion.div key={tx.id}
-                      initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.08 * i }}
-                      className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-cyan-500/5 dark:hover:bg-cyan-500/8 transition-all"
-                    >
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${tx.type === "income"
-                        ? "bg-gradient-to-br from-green-400/20 to-emerald-500/10 shadow-green-500/10"
-                        : "bg-gradient-to-br from-red-400/20 to-rose-500/10 shadow-red-500/10"
-                        }`}>
-                        {tx.type === "income" ? (
-                          <ArrowUpRight className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <ArrowDownRight className="w-4 h-4 text-red-500" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs truncate font-semibold">{tx.description || tx.category}</p>
-                        {tx.category && tx.description && (
-                          <p className="text-[9px] text-muted-foreground/60">{tx.category}</p>
-                        )}
-                      </div>
-                      <span className={`text-xs font-bold shrink-0 ${tx.type === "income" ? "text-green-500" : "text-red-500"
-                        }`}>
-                        {tx.type === "income" ? "+" : "-"}৳{tx.amount.toLocaleString()}
-                      </span>
-                    </motion.div>
-                  ))
-                )}
-              </div>
+              <CollapsibleContent isExpanded={!!expandedSections["transactions"]} isMobile={isMobile}>
+                <div className="space-y-1.5">
+                  {recentTransactions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">No transactions</p>
+                  ) : (
+                    recentTransactions.slice(0, 4).map((tx, i) => (
+                      <motion.div key={tx.id}
+                        initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.08 * i }}
+                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-cyan-500/5 dark:hover:bg-cyan-500/8 transition-all"
+                      >
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${tx.type === "income"
+                          ? "bg-gradient-to-br from-green-400/20 to-emerald-500/10 shadow-green-500/10"
+                          : "bg-gradient-to-br from-red-400/20 to-rose-500/10 shadow-red-500/10"
+                          }`}>
+                          {tx.type === "income" ? (
+                            <ArrowUpRight className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <ArrowDownRight className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs truncate font-semibold">{tx.description || tx.category}</p>
+                          {tx.category && tx.description && (
+                            <p className="text-[9px] text-muted-foreground/60">{tx.category}</p>
+                          )}
+                        </div>
+                        <span className={`text-xs font-bold shrink-0 ${tx.type === "income" ? "text-green-500" : "text-red-500"
+                          }`}>
+                          {tx.type === "income" ? "+" : "-"}৳{tx.amount.toLocaleString()}
+                        </span>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </CollapsibleContent>
             </div>
-          </div >
-        </motion.div >
-      </motion.div >
-    </AppLayout >
+          </div>
+        </motion.div>
+      </motion.div>
+    </AppLayout>
   );
 };
 
