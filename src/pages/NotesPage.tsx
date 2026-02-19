@@ -16,6 +16,7 @@ import { SEO } from "@/components/seo/SEO";
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNotes, Note, NoteColor, NOTE_COLORS } from "@/hooks/useNotes";
 import { cn } from "@/lib/utils";
 import { enhanceNoteWithAI } from "@/ai/notes/enhanceNote";
@@ -968,32 +969,29 @@ export default function NotesPage() {
                     </div>
                     <div className="top-toolbar w-full sm:w-auto">
                         {/* View Mode Dropdown */}
-                        <div className="relative shrink-0">
-                            <select
-                                value={viewMode}
-                                onChange={(e) => setViewMode(e.target.value as ViewMode)}
-                                className="appearance-none bg-secondary/50 border border-white/[0.08] rounded-lg px-3 py-2 pr-8 text-sm font-medium text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors hover:bg-secondary/70"
-                            >
-                                <option value="notes">📝 Notes{totalNotes > 0 ? ` (${totalNotes})` : ""}</option>
-                                <option value="archive">📦 Archive{archivedCount > 0 ? ` (${archivedCount})` : ""}</option>
-                                <option value="trash">🗑️ Trash{trashedCount > 0 ? ` (${trashedCount})` : ""}</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                        </div>
+                        <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+                            <SelectTrigger className="h-8 w-auto min-w-[100px] px-2.5 text-xs sm:text-sm shrink-0">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="notes">📝 Notes{totalNotes > 0 ? ` (${totalNotes})` : ""}</SelectItem>
+                                <SelectItem value="archive">📦 Archive{archivedCount > 0 ? ` (${archivedCount})` : ""}</SelectItem>
+                                <SelectItem value="trash">🗑️ Trash{trashedCount > 0 ? ` (${trashedCount})` : ""}</SelectItem>
+                            </SelectContent>
+                        </Select>
                         {/* Sort Dropdown */}
-                        <div className="relative shrink-0">
-                            <select
-                                value={sortMode}
-                                onChange={(e) => setSortMode(e.target.value as SortMode)}
-                                className="appearance-none bg-secondary/50 border border-white/[0.08] rounded-lg px-3 py-2 pr-8 text-sm font-medium text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors hover:bg-secondary/70"
-                            >
-                                <option value="newest">Newest first</option>
-                                <option value="oldest">Oldest first</option>
-                                <option value="title-asc">Title A→Z</option>
-                                <option value="title-desc">Title Z→A</option>
-                            </select>
-                            <ArrowUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                        </div>
+                        <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+                            <SelectTrigger className="h-8 w-auto min-w-[100px] px-2.5 text-xs sm:text-sm shrink-0">
+                                <ArrowUpDown className="w-3 h-3 mr-1 opacity-70" />
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="newest">Newest first</SelectItem>
+                                <SelectItem value="oldest">Oldest first</SelectItem>
+                                <SelectItem value="title-asc">Title A→Z</SelectItem>
+                                <SelectItem value="title-desc">Title Z→A</SelectItem>
+                            </SelectContent>
+                        </Select>
                         {/* Search */}
                         <div className="relative flex-1 sm:flex-initial">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

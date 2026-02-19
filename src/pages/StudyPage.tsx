@@ -269,19 +269,17 @@ export default function StudyPage() {
 
                     <div className="top-toolbar sm:w-auto">
                         {/* Subject filter dropdown */}
-                        <div className="relative">
-                            <select
-                                className="h-9 w-full sm:w-[140px] appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                value={filterSubject}
-                                onChange={(e) => setFilterSubject(e.target.value)}
-                            >
-                                <option value="all">All Subjects</option>
+                        <Select value={filterSubject} onValueChange={setFilterSubject}>
+                            <SelectTrigger className="h-8 w-auto min-w-[120px] px-2.5 text-xs sm:text-sm">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Subjects</SelectItem>
                                 {study.subjects.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                                 ))}
-                            </select>
-                            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rotate-90 opacity-50 pointer-events-none" />
-                        </div>
+                            </SelectContent>
+                        </Select>
 
                         {/* Search */}
                         <div className="relative flex-1 min-w-[120px] max-w-[240px]">

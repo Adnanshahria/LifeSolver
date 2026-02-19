@@ -525,69 +525,46 @@ export default function TasksPage() {
                     <div className="top-toolbar sm:w-auto">
 
                         {/* Tab Dropdown */}
-                        {/* Tab Dropdown */}
-                        <div className="relative">
-                            <select
-                                className="h-9 w-auto min-w-[100px] appearance-none rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                value={tabView}
-                                onChange={(e) => setTabView(e.target.value as typeof tabView)}
-                            >
-                                <option value="upcoming">Soon ({tabCounts.upcoming})</option>
-                                <option value="active">Active ({tabCounts.active})</option>
-                                <option value="archive">Archive</option>
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 pointer-events-none" />
-                        </div>
+                        <Select value={tabView} onValueChange={(v) => setTabView(v as typeof tabView)}>
+                            <SelectTrigger className="h-8 w-auto min-w-[100px] px-2.5 text-xs sm:text-sm">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="upcoming">Soon ({tabCounts.upcoming})</SelectItem>
+                                <SelectItem value="active">Active ({tabCounts.active})</SelectItem>
+                                <SelectItem value="archive">Archive</SelectItem>
+                            </SelectContent>
+                        </Select>
 
                         {/* Context Filter */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs sm:text-sm">
-                                    <Filter className="w-3.5 h-3.5" />
-                                    <span className="hidden sm:inline">Context</span>
-                                    <ChevronDown className="w-3 h-3" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-48 p-2">
-                                {["all", "general", "study", "finance", "habit", "inventory"].map((ctx) => (
-                                    <button
-                                        key={ctx}
-                                        onClick={() => setContextFilter(ctx)}
-                                        className={`w-full text-left px-3 py-2 rounded-md flex items-center gap-2 ${contextFilter === ctx ? "bg-primary/10 text-primary" : "hover:bg-secondary"}`}
-                                    >
-                                        {ctx !== "all" && contextIcons[ctx as keyof typeof contextIcons]}
-                                        {ctx.charAt(0).toUpperCase() + ctx.slice(1)}
-                                    </button>
-                                ))}
-                            </PopoverContent>
-                        </Popover>
+                        <Select value={contextFilter} onValueChange={setContextFilter}>
+                            <SelectTrigger className="h-8 w-auto min-w-[80px] px-2.5 text-xs sm:text-sm">
+                                <Filter className="w-3 h-3 mr-1 opacity-70" />
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="general">General</SelectItem>
+                                <SelectItem value="study">Study</SelectItem>
+                                <SelectItem value="finance">Finance</SelectItem>
+                                <SelectItem value="habit">Habit</SelectItem>
+                                <SelectItem value="inventory">Inventory</SelectItem>
+                            </SelectContent>
+                        </Select>
 
                         {/* Sort Dropdown */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs sm:text-sm">
-                                    <ArrowUpDown className="w-3.5 h-3.5" />
-                                    <span className="hidden sm:inline">Sort</span>
-                                    <ChevronDown className="w-3 h-3" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-48 p-2">
-                                {[
-                                    { value: "priority", label: "Priority" },
-                                    { value: "due_date", label: "Due Date" },
-                                    { value: "created", label: "Recently Added" },
-                                    { value: "alphabetical", label: "A-Z" },
-                                ].map((option) => (
-                                    <button
-                                        key={option.value}
-                                        onClick={() => setSortBy(option.value as typeof sortBy)}
-                                        className={`w-full text-left px-3 py-2 rounded-md ${sortBy === option.value ? "bg-primary/10 text-primary" : "hover:bg-secondary"}`}
-                                    >
-                                        {option.label}
-                                    </button>
-                                ))}
-                            </PopoverContent>
-                        </Popover>
+                        <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                            <SelectTrigger className="h-8 w-auto min-w-[85px] px-2.5 text-xs sm:text-sm">
+                                <ArrowUpDown className="w-3 h-3 mr-1 opacity-70" />
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="priority">Priority</SelectItem>
+                                <SelectItem value="due_date">Due Date</SelectItem>
+                                <SelectItem value="created">Recent</SelectItem>
+                                <SelectItem value="alphabetical">A-Z</SelectItem>
+                            </SelectContent>
+                        </Select>
 
                         {/* View Toggle - Desktop only */}
                         <div className="hidden md:flex bg-secondary rounded-lg p-0.5 shrink-0">
