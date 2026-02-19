@@ -1543,7 +1543,10 @@ export default function FinancePage() {
                                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                                     ))}
                                                 </Pie>
-                                                <Tooltip formatter={(value) => `৳${value}`} />
+                                                <Tooltip
+                                                    formatter={(value) => `৳${value}`}
+                                                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid #8b5cf6", borderRadius: "0.75rem", fontSize: "12px", boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
+                                                />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -1569,7 +1572,7 @@ export default function FinancePage() {
                                             <YAxis stroke="#9CA3AF" tickFormatter={(v) => `৳${v}`} fontSize={12} tickLine={false} axisLine={false} />
                                             <Tooltip
                                                 formatter={(value) => `৳${Number(value).toLocaleString()}`}
-                                                contentStyle={{ backgroundColor: "rgba(17, 24, 39, 0.8)", border: "none", borderRadius: "8px", color: "white" }}
+                                                contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid #8b5cf6", borderRadius: "0.75rem", fontSize: "12px", boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
                                             />
                                             <Legend />
                                             <Line

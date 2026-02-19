@@ -39,7 +39,7 @@ export function StudyAnalytics({ subjects, parts, subjectProgress }: StudyAnalyt
                             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`} />
                             <Tooltip
-                                contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                                contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid #8b5cf6', boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
                                 itemStyle={{ color: 'hsl(var(--foreground))' }}
                             />
                             <Bar dataKey="progress" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Progress %" />
@@ -67,7 +67,7 @@ export function StudyAnalytics({ subjects, parts, subjectProgress }: StudyAnalyt
                                 ))}
                             </Pie>
                             <Tooltip
-                                contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                                contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid #8b5cf6', boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
                                 itemStyle={{ color: 'hsl(var(--foreground))' }}
                             />
                         </PieChart>

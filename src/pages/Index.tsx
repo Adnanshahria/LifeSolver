@@ -512,7 +512,7 @@ Respond in this EXACT JSON format:
                           {expenseChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                         </Pie>
                         <Tooltip
-                          contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: "12px", boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
+                          contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid #8b5cf6", borderRadius: "0.75rem", fontSize: "12px", boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
                           formatter={(value: number) => [`৳${value.toLocaleString()}`, ""]}
                         />
                       </PieChart>

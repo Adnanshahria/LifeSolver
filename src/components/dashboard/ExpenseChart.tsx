@@ -43,7 +43,7 @@ export function ExpenseChart({ data, total }: ExpenseChartProps) {
             <Tooltip
               contentStyle={{
                 backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
+                border: "1px solid #8b5cf6",
                 borderRadius: "0.75rem",
                 boxShadow: "0 4px 24px -4px rgba(0, 0, 0, 0.15)",
               }}
