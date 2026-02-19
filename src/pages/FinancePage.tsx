@@ -858,8 +858,11 @@ export default function FinancePage() {
                     </div>
                 </div>
 
+                {/* Spacer for fixed toolbar on mobile - adjusted to avoid overspacing */}
+                <div className="h-8 md:hidden" aria-hidden="true" />
+
                 {/* Stats Cards - Now Clickable */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 md:mt-0">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -984,219 +987,264 @@ export default function FinancePage() {
 
                         <div className="relative z-10">
                             {/* Header */}
-                            <div className="mb-4">
-                                <div className="flex items-center justify-between gap-2 mb-1">
-                                    <h4 className="font-semibold text-lg text-indigo-950 dark:text-indigo-100 tracking-tight flex items-center gap-2">
-                                        Goals
-                                        <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider">
-                                            {filteredGoals.length} {goalsFilter === "active" ? "Active" : goalsFilter === "upcoming" ? "Upcoming" : "Archived"}
-                                        </span>
-                                    </h4>
+                            <div className="flex items-center justify-between gap-2 mb-4">
+                                <h4 className="font-semibold text-lg text-indigo-950 dark:text-indigo-100 tracking-tight flex items-center gap-2">
+                                    Goals
+                                    <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider">
+                                        {filteredGoals.length} {goalsFilter === "active" ? "Active" : goalsFilter === "upcoming" ? "Upcoming" : "Archived"}
+                                    </span>
+                                </h4>
+                                <div className="flex items-center gap-1.5">
                                     <p className="text-xs text-indigo-600/70 dark:text-indigo-300/70 font-medium whitespace-nowrap">
                                         {budgetGoals.length} budget, {savingsGoals.length} savings
                                     </p>
-                                </div>
-
-                                {/* Controls Row - always single row */}
-                                <div className="flex items-center gap-2">
-                                    {/* Filter Dropdown */}
-                                    <Select value={goalsFilter} onValueChange={(v) => setGoalsFilter(v as "active" | "upcoming" | "archive")}>
-                                        <SelectTrigger className="h-8 w-auto min-w-0 text-xs bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 transition-all focus:ring-indigo-500/30">
-                                            <div className="flex items-center gap-1.5">
-                                                {goalsFilter === "active" ? <Zap className="w-3.5 h-3.5" /> : goalsFilter === "upcoming" ? <Clock className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
-                                                <span className="capitalize">{goalsFilter === "active" ? "Active" : goalsFilter === "upcoming" ? "Soon" : "Past"}</span>
-                                            </div>
-                                        </SelectTrigger>
-                                        <SelectContent align="start">
-                                            <SelectItem value="active">⚡ Active</SelectItem>
-                                            <SelectItem value="upcoming">🕐 Upcoming</SelectItem>
-                                            <SelectItem value="archive">📦 Archive</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-
-                                    {/* Sort Dropdown */}
-                                    <Select value={goalsSortBy} onValueChange={(v) => setGoalsSortBy(v as "date" | "amount")}>
-                                        <SelectTrigger className="h-8 w-auto min-w-0 text-xs bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 transition-all focus:ring-indigo-500/30">
-                                            <div className="flex items-center gap-1.5">
-                                                <ListFilter className="w-3.5 h-3.5" />
-                                                <span>Sort</span>
-                                            </div>
-                                        </SelectTrigger>
-                                        <SelectContent align="start">
-                                            <SelectItem value="date">Date</SelectItem>
-                                            <SelectItem value="amount">Amount</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-
-                                    <Dialog open={isBudgetDialogOpen} onOpenChange={setIsBudgetDialogOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button size="sm" className="h-8 gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white border-0 shadow-lg shadow-indigo-500/20">
-                                                <Plus className="w-3.5 h-3.5" />
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-900/50 hover:text-indigo-600 dark:text-indigo-300/50 dark:hover:text-indigo-300">
+                                                <MoreVertical className="w-4 h-4" />
                                             </Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogHeader>
-                                                <DialogTitle>Create Budget or Savings Goal</DialogTitle>
-                                                <DialogDescription>
-                                                    Set a spending budget or savings target.
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <div className="space-y-4 pt-4">
-                                                <Tabs value={newBudget.type} onValueChange={(v) => setNewBudget({ ...newBudget, type: v as "budget" | "savings" })}>
-                                                    <TabsList className="w-full">
-                                                        <TabsTrigger
-                                                            value="budget"
-                                                            className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white transition-all"
-                                                        >
-                                                            Budget
-                                                        </TabsTrigger>
-                                                        <TabsTrigger
-                                                            value="savings"
-                                                            className="flex-1 data-[state=active]:bg-purple-500 data-[state=active]:text-white transition-all"
-                                                        >
-                                                            Savings
-                                                        </TabsTrigger>
-                                                    </TabsList>
-                                                </Tabs>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-48 p-1.5" align="end">
+                                            <div className="space-y-1">
+                                                {/* Filter */}
+                                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1">Filter</p>
+                                                {(["active", "upcoming", "archive"] as const).map((f) => (
+                                                    <Button
+                                                        key={f}
+                                                        variant={goalsFilter === f ? "secondary" : "ghost"}
+                                                        size="sm"
+                                                        className="w-full justify-start gap-2 text-xs h-8"
+                                                        onClick={() => setGoalsFilter(f)}
+                                                    >
+                                                        {f === "active" ? <Zap className="w-3.5 h-3.5" /> : f === "upcoming" ? <Clock className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
+                                                        {f === "active" ? "Active" : f === "upcoming" ? "Upcoming" : "Archive"}
+                                                    </Button>
+                                                ))}
 
-                                                <Input
-                                                    placeholder={newBudget.type === "budget" ? "Budget Name (e.g. Monthly Budget)" : "Savings Goal Name (e.g. Emergency Fund)"}
-                                                    value={newBudget.name}
-                                                    onChange={(e) => setNewBudget({ ...newBudget, name: e.target.value })}
-                                                />
+                                                <div className="border-t border-border my-1" />
 
-                                                <Input
-                                                    type="number"
-                                                    placeholder="Target Amount (৳)"
-                                                    value={newBudget.target_amount}
-                                                    onChange={(e) => setNewBudget({ ...newBudget, target_amount: e.target.value })}
-                                                />
+                                                {/* Sort */}
+                                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-0.5">Sort by</p>
+                                                {(["date", "amount"] as const).map((s) => (
+                                                    <Button
+                                                        key={s}
+                                                        variant={goalsSortBy === s ? "secondary" : "ghost"}
+                                                        size="sm"
+                                                        className="w-full justify-start gap-2 text-xs h-8"
+                                                        onClick={() => setGoalsSortBy(s)}
+                                                    >
+                                                        <ListFilter className="w-3.5 h-3.5" />
+                                                        {s === "date" ? "Date" : "Amount"}
+                                                    </Button>
+                                                ))}
 
-                                                {newBudget.type === "budget" && (
-                                                    <>
-                                                        <Select
-                                                            value={newBudget.period || "monthly"}
-                                                            onValueChange={(v) => setNewBudget({ ...newBudget, period: v as "monthly" | "weekly" | "yearly" })}
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Period" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="weekly">Weekly</SelectItem>
-                                                                <SelectItem value="monthly">Monthly</SelectItem>
-                                                                <SelectItem value="yearly">Yearly</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
+                                                <div className="border-t border-border my-1" />
 
-                                                        {/* Period-based Date Selector */}
-                                                        <div className="flex gap-2">
-                                                            {newBudget.period === "weekly" && (
-                                                                <Input
-                                                                    type="date"
-                                                                    value={`${newBudget.start_year}-${String(newBudget.start_month).padStart(2, '0')}-01`}
-                                                                    onChange={(e) => {
-                                                                        const d = new Date(e.target.value);
-                                                                        setNewBudget({
-                                                                            ...newBudget,
-                                                                            start_month: d.getMonth() + 1,
-                                                                            start_year: d.getFullYear()
-                                                                        });
-                                                                    }}
-                                                                    className="flex-1"
-                                                                />
-                                                            )}
-                                                            {newBudget.period === "monthly" && (
-                                                                <>
-                                                                    <Select
-                                                                        value={String(newBudget.start_month)}
-                                                                        onValueChange={(v) => setNewBudget({ ...newBudget, start_month: parseInt(v) })}
-                                                                    >
-                                                                        <SelectTrigger className="flex-1">
-                                                                            <SelectValue placeholder="Month" />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((m, i) => (
-                                                                                <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
-                                                                            ))}
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                    <Select
-                                                                        value={String(newBudget.start_year)}
-                                                                        onValueChange={(v) => setNewBudget({ ...newBudget, start_year: parseInt(v) })}
-                                                                    >
-                                                                        <SelectTrigger className="w-24">
-                                                                            <SelectValue placeholder="Year" />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
-                                                                                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                                                                            ))}
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                </>
-                                                            )}
-                                                            {newBudget.period === "yearly" && (
-                                                                <Select
-                                                                    value={String(newBudget.start_year)}
-                                                                    onValueChange={(v) => setNewBudget({ ...newBudget, start_year: parseInt(v) })}
-                                                                >
-                                                                    <SelectTrigger className="w-full">
-                                                                        <SelectValue placeholder="Year" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
-                                                                            <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            )}
-                                                        </div>
-
-                                                        <Input
-                                                            placeholder="Category (optional, leave blank for all expenses)"
-                                                            value={newBudget.category}
-                                                            onChange={(e) => setNewBudget({ ...newBudget, category: e.target.value })}
-                                                        />
-                                                    </>
-                                                )}
-
+                                                {/* Add Goal */}
                                                 <Button
-                                                    className="w-full"
-                                                    onClick={async () => {
-                                                        if (!newBudget.name || !newBudget.target_amount) return;
-                                                        // Build start_date from month/year for monthly/yearly budgets
-                                                        const startDate = newBudget.type === "budget"
-                                                            ? `${newBudget.start_year}-${String(newBudget.start_month).padStart(2, '0')}-01`
-                                                            : null;
-                                                        await addBudget.mutateAsync({
-                                                            name: newBudget.name,
-                                                            type: newBudget.type,
-                                                            target_amount: parseFloat(newBudget.target_amount),
-                                                            period: newBudget.type === "budget" ? newBudget.period : null,
-                                                            category: newBudget.category || null,
-                                                            start_date: startDate,
-                                                        });
-                                                        setNewBudget({
-                                                            name: "",
-                                                            type: "budget",
-                                                            target_amount: "",
-                                                            period: "monthly",
-                                                            category: "",
-                                                            start_month: new Date().getMonth() + 1,
-                                                            start_year: new Date().getFullYear(),
-                                                        });
-                                                        setIsBudgetDialogOpen(false);
-                                                    }}
-                                                    disabled={addBudget.isPending}
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="w-full justify-start gap-2 text-xs h-8 text-indigo-600 dark:text-indigo-400"
+                                                    onClick={() => setIsBudgetDialogOpen(true)}
                                                 >
-                                                    {addBudget.isPending ? "Creating..." : `Create ${newBudget.type}`}
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                    Add Goal
+                                                </Button>
+
+                                                {/* Export */}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="w-full justify-start gap-2 text-xs h-8"
+                                                    onClick={() => generatePDF(
+                                                        `Finance_${financeViewMode}_${viewMode}`,
+                                                        filteredEntries,
+                                                        "finance"
+                                                    )}
+                                                >
+                                                    <Download className="w-3.5 h-3.5" />
+                                                    Export PDF
+                                                </Button>
+
+                                                {/* History */}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="w-full justify-start gap-2 text-xs h-8"
+                                                    onClick={() => openHistory("all")}
+                                                >
+                                                    <History className="w-3.5 h-3.5" />
+                                                    View All History
                                                 </Button>
                                             </div>
-                                        </DialogContent>
-                                    </Dialog>
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
-
                             </div>
+
+                            {/* Add Goal Dialog */}
+                            <Dialog open={isBudgetDialogOpen} onOpenChange={setIsBudgetDialogOpen}>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Create Budget or Savings Goal</DialogTitle>
+                                        <DialogDescription>
+                                            Set a spending budget or savings target.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 pt-4">
+                                        <Tabs value={newBudget.type} onValueChange={(v) => setNewBudget({ ...newBudget, type: v as "budget" | "savings" })}>
+                                            <TabsList className="w-full">
+                                                <TabsTrigger
+                                                    value="budget"
+                                                    className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white transition-all"
+                                                >
+                                                    Budget
+                                                </TabsTrigger>
+                                                <TabsTrigger
+                                                    value="savings"
+                                                    className="flex-1 data-[state=active]:bg-purple-500 data-[state=active]:text-white transition-all"
+                                                >
+                                                    Savings
+                                                </TabsTrigger>
+                                            </TabsList>
+                                        </Tabs>
+
+                                        <Input
+                                            placeholder={newBudget.type === "budget" ? "Budget Name (e.g. Monthly Budget)" : "Savings Goal Name (e.g. Emergency Fund)"}
+                                            value={newBudget.name}
+                                            onChange={(e) => setNewBudget({ ...newBudget, name: e.target.value })}
+                                        />
+
+                                        <Input
+                                            type="number"
+                                            placeholder="Target Amount (৳)"
+                                            value={newBudget.target_amount}
+                                            onChange={(e) => setNewBudget({ ...newBudget, target_amount: e.target.value })}
+                                        />
+
+                                        {newBudget.type === "budget" && (
+                                            <>
+                                                <Select
+                                                    value={newBudget.period || "monthly"}
+                                                    onValueChange={(v) => setNewBudget({ ...newBudget, period: v as "monthly" | "weekly" | "yearly" })}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Period" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="weekly">Weekly</SelectItem>
+                                                        <SelectItem value="monthly">Monthly</SelectItem>
+                                                        <SelectItem value="yearly">Yearly</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+
+                                                {/* Period-based Date Selector */}
+                                                <div className="flex gap-2">
+                                                    {newBudget.period === "weekly" && (
+                                                        <Input
+                                                            type="date"
+                                                            value={`${newBudget.start_year}-${String(newBudget.start_month).padStart(2, '0')}-01`}
+                                                            onChange={(e) => {
+                                                                const d = new Date(e.target.value);
+                                                                setNewBudget({
+                                                                    ...newBudget,
+                                                                    start_month: d.getMonth() + 1,
+                                                                    start_year: d.getFullYear()
+                                                                });
+                                                            }}
+                                                            className="flex-1"
+                                                        />
+                                                    )}
+                                                    {newBudget.period === "monthly" && (
+                                                        <>
+                                                            <Select
+                                                                value={String(newBudget.start_month)}
+                                                                onValueChange={(v) => setNewBudget({ ...newBudget, start_month: parseInt(v) })}
+                                                            >
+                                                                <SelectTrigger className="flex-1">
+                                                                    <SelectValue placeholder="Month" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((m, i) => (
+                                                                        <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <Select
+                                                                value={String(newBudget.start_year)}
+                                                                onValueChange={(v) => setNewBudget({ ...newBudget, start_year: parseInt(v) })}
+                                                            >
+                                                                <SelectTrigger className="w-24">
+                                                                    <SelectValue placeholder="Year" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
+                                                                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </>
+                                                    )}
+                                                    {newBudget.period === "yearly" && (
+                                                        <Select
+                                                            value={String(newBudget.start_year)}
+                                                            onValueChange={(v) => setNewBudget({ ...newBudget, start_year: parseInt(v) })}
+                                                        >
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder="Year" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
+                                                                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    )}
+                                                </div>
+
+                                                <Input
+                                                    placeholder="Category (optional, leave blank for all expenses)"
+                                                    value={newBudget.category}
+                                                    onChange={(e) => setNewBudget({ ...newBudget, category: e.target.value })}
+                                                />
+                                            </>
+                                        )}
+
+                                        <Button
+                                            className="w-full"
+                                            onClick={async () => {
+                                                if (!newBudget.name || !newBudget.target_amount) return;
+                                                // Build start_date from month/year for monthly/yearly budgets
+                                                const startDate = newBudget.type === "budget"
+                                                    ? `${newBudget.start_year}-${String(newBudget.start_month).padStart(2, '0')}-01`
+                                                    : null;
+                                                await addBudget.mutateAsync({
+                                                    name: newBudget.name,
+                                                    type: newBudget.type,
+                                                    target_amount: parseFloat(newBudget.target_amount),
+                                                    period: newBudget.type === "budget" ? newBudget.period : null,
+                                                    category: newBudget.category || null,
+                                                    start_date: startDate,
+                                                });
+                                                setNewBudget({
+                                                    name: "",
+                                                    type: "budget",
+                                                    target_amount: "",
+                                                    period: "monthly",
+                                                    category: "",
+                                                    start_month: new Date().getMonth() + 1,
+                                                    start_year: new Date().getFullYear(),
+                                                });
+                                                setIsBudgetDialogOpen(false);
+                                            }}
+                                            disabled={addBudget.isPending}
+                                        >
+                                            {addBudget.isPending ? "Creating..." : `Create ${newBudget.type}`}
+                                        </Button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
 
                             {/* Goals List - Rendered within Card */}
                             <div className={`grid gap-2 overflow-y-auto custom-scrollbar pr-1 mt-2.5 ${filteredGoals.length > 0 ? "max-h-[120px]" : "h-auto"}`}>
@@ -1698,11 +1746,10 @@ export default function FinancePage() {
                         </motion.div>
                     )
                 }
-            </AnimatePresence >
+            </AnimatePresence>
 
             {/* Edit Entry Dialog */}
-            < Dialog open={!!editingEntry
-            } onOpenChange={(open) => !open && setEditingEntry(null)}>
+            <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Edit Entry</DialogTitle>
@@ -1803,7 +1850,7 @@ export default function FinancePage() {
                         </div>
                     )}
                 </DialogContent>
-            </Dialog >
+            </Dialog>
 
             {/* Savings History Modal - Mobile Responsive */}
             <AnimatePresence>
@@ -1913,10 +1960,10 @@ export default function FinancePage() {
                         </motion.div>
                     )
                 }
-            </AnimatePresence >
+            </AnimatePresence>
 
             {/* Edit Savings Transaction Dialog */}
-            < Dialog open={!!editingSavingsTransaction} onOpenChange={(open) => !open && setEditingSavingsTransaction(null)}>
+            <Dialog open={!!editingSavingsTransaction} onOpenChange={(open) => !open && setEditingSavingsTransaction(null)}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Edit Transaction</DialogTitle>
@@ -2008,7 +2055,7 @@ export default function FinancePage() {
                         </div>
                     )}
                 </DialogContent>
-            </Dialog >
-        </AppLayout >
+            </Dialog>
+        </AppLayout>
     );
 }
