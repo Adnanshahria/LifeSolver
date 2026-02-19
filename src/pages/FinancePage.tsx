@@ -524,28 +524,30 @@ export default function FinancePage() {
                         {/* Date Controls */}
                         {viewMode === "daily" && (
                             <>
-                                <Button variant="outline" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => changeDate(-1)}>
-                                    <ChevronLeft className="w-3.5 h-3.5" />
-                                </Button>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs sm:text-sm font-medium">
-                                            <CalendarIcon className="w-3.5 h-3.5" />
-                                            {format(new Date(selectedDate + "T12:00:00"), "MMM d, yyyy")}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={new Date(selectedDate + "T12:00:00")}
-                                            onSelect={(date) => date && setSelectedDate(getLocalDateStr(date))}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                                <Button variant="outline" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => changeDate(1)}>
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                </Button>
+                                <div className="flex items-center bg-secondary/50 rounded-full p-0.5 border border-border/50">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/80" onClick={() => changeDate(-1)}>
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </Button>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="h-7 px-3 text-xs sm:text-sm font-medium hover:bg-background/50">
+                                                <CalendarIcon className="w-3.5 h-3.5 mr-1.5 opacity-70" />
+                                                {format(new Date(selectedDate + "T12:00:00"), "MMM d, yyyy")}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={new Date(selectedDate + "T12:00:00")}
+                                                onSelect={(date) => date && setSelectedDate(getLocalDateStr(date))}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/80" onClick={() => changeDate(1)}>
+                                        <ChevronRight className="w-4 h-4" />
+                                    </Button>
+                                </div>
                                 <Button variant="ghost" size="sm" className="hidden sm:inline-flex h-8 text-xs" onClick={() => setSelectedDate(getLocalDateStr(new Date()))}>
                                     Today
                                 </Button>
@@ -563,20 +565,22 @@ export default function FinancePage() {
                                         <SelectItem value="1">Start: Mon</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Button variant="outline" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => changeDate(-7)}>
-                                    <ChevronLeft className="w-3.5 h-3.5" />
-                                </Button>
-                                <div className="px-3 py-1.5 bg-secondary rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap">
-                                    {(() => {
-                                        const range = getDateRange();
-                                        const start = new Date(range.start + "T12:00:00");
-                                        const end = new Date(range.end + "T12:00:00");
-                                        return `${format(start, "MMM d")} - ${format(end, "MMM d")}`;
-                                    })()}
+                                <div className="flex items-center bg-secondary/50 rounded-full p-0.5 border border-border/50">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/80" onClick={() => changeDate(-7)}>
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </Button>
+                                    <div className="px-3 text-xs sm:text-sm font-medium whitespace-nowrap">
+                                        {(() => {
+                                            const range = getDateRange();
+                                            const start = new Date(range.start + "T12:00:00");
+                                            const end = new Date(range.end + "T12:00:00");
+                                            return `${format(start, "MMM d")} - ${format(end, "MMM d")}`;
+                                        })()}
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/80" onClick={() => changeDate(7)}>
+                                        <ChevronRight className="w-4 h-4" />
+                                    </Button>
                                 </div>
-                                <Button variant="outline" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => changeDate(7)}>
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                </Button>
                                 <Button variant="ghost" size="sm" className="hidden sm:inline-flex h-8 text-xs" onClick={() => setSelectedDate(getLocalDateStr(new Date()))}>
                                     This Week
                                 </Button>
@@ -584,36 +588,38 @@ export default function FinancePage() {
                         )}
                         {viewMode === "monthly" && (
                             <>
-                                <Button variant="outline" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => {
-                                    const d = new Date(selectedDate + "T12:00:00");
-                                    d.setMonth(d.getMonth() - 1);
-                                    setSelectedDate(getLocalDateStr(d));
-                                }}>
-                                    <ChevronLeft className="w-3.5 h-3.5" />
-                                </Button>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs sm:text-sm font-medium">
-                                            <CalendarIcon className="w-3.5 h-3.5" />
-                                            {format(new Date(selectedDate + "T12:00:00"), "MMMM yyyy")}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={new Date(selectedDate + "T12:00:00")}
-                                            onSelect={(date) => date && setSelectedDate(getLocalDateStr(date))}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                                <Button variant="outline" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => {
-                                    const d = new Date(selectedDate + "T12:00:00");
-                                    d.setMonth(d.getMonth() + 1);
-                                    setSelectedDate(getLocalDateStr(d));
-                                }}>
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                </Button>
+                                <div className="flex items-center bg-secondary/50 rounded-full p-0.5 border border-border/50">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/80" onClick={() => {
+                                        const d = new Date(selectedDate + "T12:00:00");
+                                        d.setMonth(d.getMonth() - 1);
+                                        setSelectedDate(getLocalDateStr(d));
+                                    }}>
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </Button>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="h-7 px-3 text-xs sm:text-sm font-medium hover:bg-background/50">
+                                                <CalendarIcon className="w-3.5 h-3.5 mr-1.5 opacity-70" />
+                                                {format(new Date(selectedDate + "T12:00:00"), "MMMM yyyy")}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={new Date(selectedDate + "T12:00:00")}
+                                                onSelect={(date) => date && setSelectedDate(getLocalDateStr(date))}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/80" onClick={() => {
+                                        const d = new Date(selectedDate + "T12:00:00");
+                                        d.setMonth(d.getMonth() + 1);
+                                        setSelectedDate(getLocalDateStr(d));
+                                    }}>
+                                        <ChevronRight className="w-4 h-4" />
+                                    </Button>
+                                </div>
                                 <Button variant="ghost" size="sm" className="hidden sm:inline-flex h-8 text-xs" onClick={() => setSelectedDate(getLocalDateStr(new Date()))}>
                                     This Month
                                 </Button>
@@ -621,30 +627,32 @@ export default function FinancePage() {
                         )}
                         {viewMode === "yearly" && (
                             <>
-                                <Button variant="outline" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => {
-                                    const d = new Date(selectedDate + "T12:00:00");
-                                    d.setFullYear(d.getFullYear() - 1);
-                                    setSelectedDate(getLocalDateStr(d));
-                                }}>
-                                    <ChevronLeft className="w-3.5 h-3.5" />
-                                </Button>
-                                <Select value={selectedDate.substring(0, 4)} onValueChange={(v) => setSelectedDate(v + "-01-01")}>
-                                    <SelectTrigger className="w-[100px] h-8 text-xs sm:text-sm">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => (
-                                            <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Button variant="outline" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => {
-                                    const d = new Date(selectedDate + "T12:00:00");
-                                    d.setFullYear(d.getFullYear() + 1);
-                                    setSelectedDate(getLocalDateStr(d));
-                                }}>
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                </Button>
+                                <div className="flex items-center bg-secondary/50 rounded-full p-0.5 border border-border/50">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/80" onClick={() => {
+                                        const d = new Date(selectedDate + "T12:00:00");
+                                        d.setFullYear(d.getFullYear() - 1);
+                                        setSelectedDate(getLocalDateStr(d));
+                                    }}>
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </Button>
+                                    <Select value={selectedDate.substring(0, 4)} onValueChange={(v) => setSelectedDate(v + "-01-01")}>
+                                        <SelectTrigger className="h-7 w-[80px] border-none bg-transparent focus:ring-0 focus:ring-offset-0 px-2 text-xs sm:text-sm font-medium hover:bg-background/50">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => (
+                                                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background/80" onClick={() => {
+                                        const d = new Date(selectedDate + "T12:00:00");
+                                        d.setFullYear(d.getFullYear() + 1);
+                                        setSelectedDate(getLocalDateStr(d));
+                                    }}>
+                                        <ChevronRight className="w-4 h-4" />
+                                    </Button>
+                                </div>
                                 <Button variant="ghost" size="sm" className="hidden sm:inline-flex h-8 text-xs" onClick={() => setSelectedDate(getLocalDateStr(new Date()))}>
                                     This Year
                                 </Button>
