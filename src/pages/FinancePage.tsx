@@ -464,6 +464,16 @@ export default function FinancePage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
             >
+                {/* Mobile Floating Add Entry Button */}
+                <div className="fixed bottom-20 right-4 z-50 md:hidden">
+                    <Button
+                        size="icon"
+                        className="w-12 h-12 rounded-full shadow-lg shadow-primary/25 glow-primary bg-primary hover:bg-primary/90 text-primary-foreground"
+                        onClick={() => setIsDialogOpen(true)}
+                    >
+                        <Plus className="w-6 h-6" />
+                    </Button>
+                </div>
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                     <div className="hidden md:block">
@@ -663,16 +673,7 @@ export default function FinancePage() {
                             </div>
                         )}
 
-                        {/* Mobile Floating Add Entry Button */}
-                        <div className="fixed bottom-20 right-4 z-50 md:hidden">
-                            <Button
-                                size="icon"
-                                className="w-12 h-12 rounded-full shadow-lg shadow-primary/25 glow-primary bg-primary hover:bg-primary/90 text-primary-foreground"
-                                onClick={() => setIsDialogOpen(true)}
-                            >
-                                <Plus className="w-6 h-6" />
-                            </Button>
-                        </div>
+
 
                         {/* Add Entry Button */}
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -859,7 +860,7 @@ export default function FinancePage() {
                 </div>
 
                 {/* Spacer for fixed toolbar on mobile - adjusted to avoid overspacing */}
-                <div className="h-8 md:hidden" aria-hidden="true" />
+                <div className="h-7 md:hidden" aria-hidden="true" />
 
                 {/* Stats Cards - Now Clickable */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 md:mt-0">
