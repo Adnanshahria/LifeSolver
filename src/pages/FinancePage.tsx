@@ -462,7 +462,7 @@ export default function FinancePage() {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
+                className="space-y-4 sm:space-y-6"
             >
                 {/* Mobile Floating Add Entry Button */}
                 <div className="fixed bottom-20 right-4 z-50 md:hidden">
@@ -860,7 +860,7 @@ export default function FinancePage() {
                 </div>
 
                 {/* Spacer for fixed toolbar on mobile - adjusted to avoid overspacing */}
-                <div className="h-7 md:hidden" aria-hidden="true" />
+                <div className="h-2 md:hidden" aria-hidden="true" />
 
                 {/* Stats Cards - Now Clickable */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 md:mt-0">
