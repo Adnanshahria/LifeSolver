@@ -216,14 +216,14 @@ Respond in this EXACT JSON format:
       icon: Wallet, label: "Balance", value: `${balance >= 0 ? "" : "-"}${formatCurrency(balance)}`,
       sub: `Income: ৳${totalIncome.toLocaleString()}`,
       accent: "#3b82f6", gradient: "from-blue-500/20 via-blue-400/10 to-sky-500/5",
-      borderColor: "border-blue-300/40 dark:border-blue-500/25",
+      borderColor: "border-blue-200 dark:border-blue-500/25",
       trend: balance >= 0 ? { value: Math.round((balance / (totalIncome || 1)) * 100), up: true } : null,
     },
     {
       icon: Target, label: "Budget Left", value: `৳${budgetRemaining.toLocaleString()}`,
       sub: primaryBudget?.name || "No budget",
       accent: "#f59e0b", gradient: "from-amber-500/20 via-amber-400/10 to-yellow-500/5",
-      borderColor: "border-amber-300/40 dark:border-amber-500/25",
+      borderColor: "border-amber-200 dark:border-amber-500/25",
       trend: budgetRemaining >= 0 ? { value: Math.round((budgetRemaining / (primaryBudget?.target_amount || 1)) * 100), up: true } : null,
       className: "hidden sm:block",
     },
@@ -231,7 +231,7 @@ Respond in this EXACT JSON format:
       icon: PiggyBank, label: "Total Savings", value: `৳${totalSavings.toLocaleString()}`,
       sub: `${savingsGoals.length} goal(s)`,
       accent: "#10b981", gradient: "from-emerald-500/20 via-emerald-400/10 to-green-500/5",
-      borderColor: "border-emerald-300/40 dark:border-emerald-500/25",
+      borderColor: "border-emerald-200 dark:border-emerald-500/25",
       trend: null,
       className: "hidden sm:block",
     },
@@ -239,7 +239,7 @@ Respond in this EXACT JSON format:
       icon: ListTodo, label: "Pending Tasks", value: String(pendingTasks.length),
       sub: `${highPriorityTasks.length} high priority`,
       accent: "#ef4444", gradient: "from-rose-500/20 via-rose-400/10 to-pink-500/5",
-      borderColor: "border-rose-300/40 dark:border-rose-500/25",
+      borderColor: "border-rose-200 dark:border-rose-500/25",
       trend: null,
     },
   ];
@@ -249,15 +249,38 @@ Respond in this EXACT JSON format:
       <SEO title="Dashboard" description="Overview of your tasks, finance, habits, and study progress." />
 
       {/* ===== HEADER ===== */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="block mb-6 md:mb-8">
-        <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-          <CalendarDays className="w-4 h-4" />
-          <span>{today}</span>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 md:mb-8">
+        {/* Mobile Header Card */}
+        <div className="block md:hidden">
+          <div className="rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 p-6 text-white shadow-lg shadow-indigo-500/25 relative overflow-hidden">
+            {/* Background Pattern */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -ml-12 -mb-12"></div>
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 text-white/80 text-xs font-medium mb-1">
+                <CalendarDays className="w-3.5 h-3.5" />
+                <span>{today}</span>
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight mb-1">
+                {greeting}, <span className="text-white">{user?.name?.split(" ")[0] || "User"}</span>
+              </h1>
+              <p className="text-white/70 text-xs">Here's your daily snapshot</p>
+            </div>
+          </div>
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-          {greeting}, <span className="text-gradient">{user?.name?.split(" ")[0] || "User"}</span>
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm">Here's your daily snapshot</p>
+
+        {/* Desktop Header */}
+        <div className="hidden md:block">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+            <CalendarDays className="w-4 h-4" />
+            <span>{today}</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+            {greeting}, <span className="text-gradient">{user?.name?.split(" ")[0] || "User"}</span>
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">Here's your daily snapshot</p>
+        </div>
       </motion.div>
 
       {/* ===== STAT CARDS ===== */}
@@ -297,7 +320,7 @@ Respond in this EXACT JSON format:
 
         {/* ── AI Summary (span 8) ── */}
         <motion.div variants={fadeUp} className="lg:col-span-8 order-1">
-          <div className="rounded-xl sm:rounded-2xl border-2 border-sky-200/50 dark:border-sky-500/20 bg-gradient-to-br from-sky-50/50 via-card/80 to-indigo-50/30 dark:from-sky-950/20 dark:via-card/80 dark:to-indigo-950/10 backdrop-blur-sm p-4 sm:p-5 relative overflow-hidden h-full">
+          <div className="rounded-xl sm:rounded-2xl border-2 border-sky-200 dark:border-sky-500/20 bg-gradient-to-br from-sky-50/50 via-card/80 to-indigo-50/30 dark:from-sky-950/20 dark:via-card/80 dark:to-indigo-950/10 backdrop-blur-sm p-4 sm:p-5 relative overflow-hidden h-full">
             {/* Background accents */}
             <div className="absolute -top-20 -right-20 w-48 h-48 rounded-full blur-[80px] opacity-20"
               style={{ background: "linear-gradient(135deg, #38bdf8, #6366f1)" }} />
@@ -394,7 +417,7 @@ Respond in this EXACT JSON format:
 
         {/* ── Monthly Spending (span 4) ── */}
         <motion.div variants={fadeUp} className="lg:col-span-4 order-3 lg:order-2">
-          <div className="rounded-xl sm:rounded-2xl border-2 border-violet-200/50 dark:border-violet-500/20 bg-gradient-to-br from-violet-50/40 via-card/80 to-fuchsia-50/20 dark:from-violet-950/20 dark:via-card/80 dark:to-fuchsia-950/10 backdrop-blur-sm p-4 sm:p-5 h-full relative overflow-hidden">
+          <div className="rounded-xl sm:rounded-2xl border-2 border-violet-200 dark:border-violet-500/20 bg-gradient-to-br from-violet-50/40 via-card/80 to-fuchsia-50/20 dark:from-violet-950/20 dark:via-card/80 dark:to-fuchsia-950/10 backdrop-blur-sm p-4 sm:p-5 h-full relative overflow-hidden">
             {/* Glow orb */}
             <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-violet-500 opacity-[0.06] blur-3xl" />
 
@@ -485,89 +508,91 @@ Respond in this EXACT JSON format:
               </div>
             </div>
           </div>
-          {/* ===== ACTIVITY OVERVIEW (Moved inside grid for mobile ordering) ===== */}
-          <motion.div variants={fadeUp} className="lg:col-span-12 order-2 lg:order-3">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Activity className="w-4 h-4 text-primary" />
-              </div>
-              <h3 className="font-semibold text-sm">Activity Overview</h3>
+
+        </motion.div>
+
+        {/* ===== ACTIVITY OVERVIEW (Moved inside grid for mobile ordering) ===== */}
+        <motion.div variants={fadeUp} className="lg:col-span-12 order-2 lg:order-3">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <Activity className="w-4 h-4 text-primary" />
             </div>
+            <h3 className="font-semibold text-sm">Activity Overview</h3>
+          </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-              {[
-                {
-                  label: "Tasks Done", value: completedTasks.length, total: allTasks.length,
-                  color: "#3b82f6", icon: CheckCircle2,
-                  gradient: "from-blue-500/15 via-blue-400/5 to-transparent",
-                  border: "border-blue-200/50 dark:border-blue-500/20",
-                  bg: "bg-blue-500/8",
-                },
-                {
-                  label: "Habits Today", value: habitsCompletedToday, total: allHabits.length,
-                  color: "#10b981", icon: Flame,
-                  gradient: "from-emerald-500/15 via-emerald-400/5 to-transparent",
-                  border: "border-emerald-200/50 dark:border-emerald-500/20",
-                  bg: "bg-emerald-500/8",
-                },
-                {
-                  label: "Study Progress", value: studyProgress, total: 100,
-                  color: "#8b5cf6", icon: GraduationCap, suffix: "%",
-                  gradient: "from-violet-500/15 via-violet-400/5 to-transparent",
-                  border: "border-violet-200/50 dark:border-violet-500/20",
-                  bg: "bg-violet-500/8",
-                },
-                {
-                  label: "Notes Written", value: (notes || []).length, total: null,
-                  color: "#f59e0b", icon: BookOpen,
-                  gradient: "from-amber-500/15 via-amber-400/5 to-transparent",
-                  border: "border-amber-200/50 dark:border-amber-500/20",
-                  bg: "bg-amber-500/8",
-                },
-              ].map((item) => {
-                const pct = item.total ? Math.round((item.value / item.total) * 100) : 100;
-                return (
-                  <motion.div key={item.label} variants={fadeUp}
-                    className={`group relative overflow-hidden rounded-lg sm:rounded-2xl p-2 sm:p-4 bg-gradient-to-br ${item.gradient} border-2 ${item.border} backdrop-blur-sm transition-all duration-300 hover:shadow-lg cursor-default`}
-                  >
-                    {/* Glow orb */}
-                    <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-15 blur-2xl group-hover:opacity-30 transition-opacity duration-500"
-                      style={{ backgroundColor: item.color }} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            {[
+              {
+                label: "Tasks Done", value: completedTasks.length, total: allTasks.length,
+                color: "#3b82f6", icon: CheckCircle2,
+                gradient: "from-blue-500/15 via-blue-400/5 to-transparent",
+                border: "border-blue-200 dark:border-blue-500/20",
+                bg: "bg-blue-500/8",
+              },
+              {
+                label: "Habits Today", value: habitsCompletedToday, total: allHabits.length,
+                color: "#10b981", icon: Flame,
+                gradient: "from-emerald-500/15 via-emerald-400/5 to-transparent",
+                border: "border-emerald-200 dark:border-emerald-500/20",
+                bg: "bg-emerald-500/8",
+              },
+              {
+                label: "Study Progress", value: studyProgress, total: 100,
+                color: "#8b5cf6", icon: GraduationCap, suffix: "%",
+                gradient: "from-violet-500/15 via-violet-400/5 to-transparent",
+                border: "border-violet-200 dark:border-violet-500/20",
+                bg: "bg-violet-500/8",
+              },
+              {
+                label: "Notes Written", value: (notes || []).length, total: null,
+                color: "#f59e0b", icon: BookOpen,
+                gradient: "from-amber-500/15 via-amber-400/5 to-transparent",
+                border: "border-amber-200 dark:border-amber-500/20",
+                bg: "bg-amber-500/8",
+              },
+            ].map((item) => {
+              const pct = item.total ? Math.round((item.value / item.total) * 100) : 100;
+              return (
+                <motion.div key={item.label} variants={fadeUp}
+                  className={`group relative overflow-hidden rounded-lg sm:rounded-2xl p-2 sm:p-4 bg-gradient-to-br ${item.gradient} border-2 ${item.border} backdrop-blur-sm transition-all duration-300 hover:shadow-lg cursor-default`}
+                >
+                  {/* Glow orb */}
+                  <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-15 blur-2xl group-hover:opacity-30 transition-opacity duration-500"
+                    style={{ backgroundColor: item.color }} />
 
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-1.5 sm:mb-3">
-                        <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${item.bg}`}>
-                          <item.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: item.color }} />
-                        </div>
-                        <RadialProgress progress={pct} color={item.color} size={36} strokeWidth={3}>
-                          <span className="text-[8px] sm:text-[9px] font-bold" style={{ color: item.color }}>{pct}%</span>
-                        </RadialProgress>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-1.5 sm:mb-3">
+                      <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${item.bg}`}>
+                        <item.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: item.color }} />
                       </div>
-
-                      <h4 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: item.color }}>
-                        {item.value}{item.suffix || ""}
-                      </h4>
-                      <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium mt-0.5">{item.label}</p>
-                      {item.total !== null && (
-                        <div className="mt-1.5 sm:mt-2">
-                          <div className="h-1 sm:h-1.5 rounded-full bg-muted/20 overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${pct}%` }}
-                              transition={{ duration: 1, delay: 0.3 }}
-                              className="h-full rounded-full"
-                              style={{ backgroundColor: item.color }}
-                            />
-                          </div>
-                          <p className="text-[8px] sm:text-[9px] text-muted-foreground/50 mt-0.5 sm:mt-1">{item.value} of {item.total}</p>
-                        </div>
-                      )}
+                      <RadialProgress progress={pct} color={item.color} size={36} strokeWidth={3}>
+                        <span className="text-[8px] sm:text-[9px] font-bold" style={{ color: item.color }}>{pct}%</span>
+                      </RadialProgress>
                     </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
+
+                    <h4 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: item.color }}>
+                      {item.value}{item.suffix || ""}
+                    </h4>
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium mt-0.5">{item.label}</p>
+                    {item.total !== null && (
+                      <div className="mt-1.5 sm:mt-2">
+                        <div className="h-1 sm:h-1.5 rounded-full bg-muted/20 overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 1, delay: 0.3 }}
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: item.color }}
+                          />
+                        </div>
+                        <p className="text-[8px] sm:text-[9px] text-muted-foreground/50 mt-0.5 sm:mt-1">{item.value} of {item.total}</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </motion.div>
       </motion.div>
 
@@ -578,7 +603,7 @@ Respond in this EXACT JSON format:
 
         {/* ── Recent Tasks ── */}
         <motion.div variants={fadeUp}>
-          <div className="rounded-xl sm:rounded-2xl border-2 border-blue-200/50 dark:border-blue-500/20 bg-gradient-to-br from-blue-50/40 via-card/80 to-sky-50/20 dark:from-blue-950/15 dark:via-card/80 dark:to-sky-950/10 backdrop-blur-sm p-4 sm:p-5 h-full relative overflow-hidden">
+          <div className="rounded-xl sm:rounded-2xl border-2 border-blue-200 dark:border-blue-500/20 bg-gradient-to-br from-blue-50/40 via-card/80 to-sky-50/20 dark:from-blue-950/15 dark:via-card/80 dark:to-sky-950/10 backdrop-blur-sm p-4 sm:p-5 h-full relative overflow-hidden">
             {/* Glow */}
             <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-blue-500 opacity-[0.06] blur-3xl" />
 
@@ -639,11 +664,11 @@ Respond in this EXACT JSON format:
               </div>
             </div>
           </div>
-        </motion.div>
+        </motion.div >
 
         {/* ── Habits ── */}
         <motion.div variants={fadeUp}>
-          <div className="rounded-xl sm:rounded-2xl border-2 border-orange-200/50 dark:border-orange-500/20 bg-gradient-to-br from-orange-50/40 via-card/80 to-amber-50/20 dark:from-orange-950/15 dark:via-card/80 dark:to-amber-950/10 backdrop-blur-sm p-4 sm:p-5 h-full relative overflow-hidden">
+          <div className="rounded-xl sm:rounded-2xl border-2 border-orange-200 dark:border-orange-500/20 bg-gradient-to-br from-orange-50/40 via-card/80 to-amber-50/20 dark:from-orange-950/15 dark:via-card/80 dark:to-amber-950/10 backdrop-blur-sm p-4 sm:p-5 h-full relative overflow-hidden">
             {/* Glow */}
             <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-orange-500 opacity-[0.06] blur-3xl" />
 
@@ -709,12 +734,12 @@ Respond in this EXACT JSON format:
               </div>
             </div>
           </div>
-        </motion.div>
+        </motion.div >
 
         {/* ── Study + Transactions ── */}
         <motion.div variants={fadeUp} className="space-y-4">
           {/* Study Progress */}
-          <div className="rounded-xl sm:rounded-2xl border-2 border-violet-200/50 dark:border-violet-500/20 bg-gradient-to-br from-violet-50/30 via-card/80 to-purple-50/20 dark:from-violet-950/15 dark:via-card/80 dark:to-purple-950/10 backdrop-blur-sm p-4 sm:p-5 relative overflow-hidden">
+          <div className="rounded-xl sm:rounded-2xl border-2 border-violet-200 dark:border-violet-500/20 bg-gradient-to-br from-violet-50/30 via-card/80 to-purple-50/20 dark:from-violet-950/15 dark:via-card/80 dark:to-purple-950/10 backdrop-blur-sm p-4 sm:p-5 relative overflow-hidden">
             <div className="absolute -bottom-8 -right-8 w-28 h-28 rounded-full bg-violet-500 opacity-[0.05] blur-3xl" />
 
             <div className="relative z-10">
@@ -756,10 +781,10 @@ Respond in this EXACT JSON format:
                 <p className="text-xs text-muted-foreground text-center py-4">No study data</p>
               )}
             </div>
-          </div>
+          </div >
 
           {/* Recent Transactions */}
-          <div className="rounded-xl sm:rounded-2xl border-2 border-cyan-200/50 dark:border-cyan-500/20 bg-gradient-to-br from-cyan-50/30 via-card/80 to-teal-50/20 dark:from-cyan-950/15 dark:via-card/80 dark:to-teal-950/10 backdrop-blur-sm p-4 sm:p-5 relative overflow-hidden">
+          <div className="rounded-xl sm:rounded-2xl border-2 border-cyan-200 dark:border-cyan-500/20 bg-gradient-to-br from-cyan-50/30 via-card/80 to-teal-50/20 dark:from-cyan-950/15 dark:via-card/80 dark:to-teal-950/10 backdrop-blur-sm p-4 sm:p-5 relative overflow-hidden">
             <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full bg-cyan-500 opacity-[0.05] blur-3xl" />
 
             <div className="relative z-10">
@@ -805,10 +830,10 @@ Respond in this EXACT JSON format:
                 )}
               </div>
             </div>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AppLayout>
+          </div >
+        </motion.div >
+      </motion.div >
+    </AppLayout >
   );
 };
 
