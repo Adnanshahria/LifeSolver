@@ -522,7 +522,7 @@ export default function TasksPage() {
                     </div>
 
                     {/* Single-row controls - Top Toolbar */}
-                    <div className="top-toolbar w-full sm:w-auto">
+                    <div className="top-toolbar sm:w-auto">
 
                         {/* Tab Dropdown */}
                         {/* Tab Dropdown */}
@@ -615,7 +615,7 @@ export default function TasksPage() {
                             onClick={() => setImportStudyOpen(true)}
                         >
                             <GraduationCap className="w-4 h-4" />
-                            <span className="hidden sm:inline">Import Study</span>
+                            <span>Import<span className="hidden sm:inline"> Study</span></span>
                         </Button>
 
                         {/* Add Task */}

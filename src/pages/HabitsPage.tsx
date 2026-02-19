@@ -293,7 +293,7 @@ export default function HabitsPage() {
                         <p className="text-sm text-muted-foreground ml-14">Build lasting habits with streaks</p>
                     </div>
 
-                    <div className="top-toolbar w-full sm:w-auto !gap-2 flex-nowrap overflow-x-auto no-scrollbar py-1">
+                    <div className="top-toolbar sm:w-auto !gap-2 flex-nowrap overflow-x-auto no-scrollbar py-1">
                         {/* Category Filter */}
                         <Select value={activeCategory} onValueChange={setActiveCategory}>
                             <SelectTrigger className="h-8 w-auto min-w-[90px] px-2.5 text-xs bg-background/50 border-dashed">

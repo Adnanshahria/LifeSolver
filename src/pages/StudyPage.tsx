@@ -267,7 +267,7 @@ export default function StudyPage() {
                         <p className="text-sm text-muted-foreground ml-14">Organize subjects, chapters & parts</p>
                     </div>
 
-                    <div className="top-toolbar w-full sm:w-auto">
+                    <div className="top-toolbar sm:w-auto">
                         {/* Subject filter dropdown */}
                         <div className="relative">
                             <select
