@@ -114,6 +114,8 @@ export default function FinancePage() {
     // View mode: daily, weekly, monthly, yearly, custom, all
     type ViewMode = "daily" | "weekly" | "monthly" | "yearly" | "custom" | "all";
     const [viewMode, setViewMode] = useState<ViewMode>("daily");
+    // Week start day preference (0=Sun, 1=Mon, 6=Sat)
+    const [weekStartDay, setWeekStartDay] = useState(6);
 
     // Date states - use local date, not UTC
     const [selectedDate, setSelectedDate] = useState(() => getLocalDateStr(new Date()));
@@ -161,10 +163,10 @@ export default function FinancePage() {
                 return { start: selectedDate, end: selectedDate };
             case "weekly": {
                 const dayOfWeek = selected.getDay();
-                // Start week on Saturday (6), end on Friday (5)
-                const daysFromSaturday = (dayOfWeek + 1) % 7;
+                // Start week based on weekStartDay preference
+                const daysFromStart = (dayOfWeek - weekStartDay + 7) % 7;
                 const weekStart = new Date(selected);
-                weekStart.setDate(selected.getDate() - daysFromSaturday);
+                weekStart.setDate(selected.getDate() - daysFromStart);
                 const weekEnd = new Date(weekStart);
                 weekEnd.setDate(weekStart.getDate() + 6);
                 return { start: getLocalDateStr(weekStart), end: getLocalDateStr(weekEnd) };
@@ -551,6 +553,16 @@ export default function FinancePage() {
                         )}
                         {viewMode === "weekly" && (
                             <>
+                                <Select value={weekStartDay.toString()} onValueChange={(v) => setWeekStartDay(parseInt(v))}>
+                                    <SelectTrigger className="w-[100px] h-8 text-xs">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="6">Start: Sat</SelectItem>
+                                        <SelectItem value="0">Start: Sun</SelectItem>
+                                        <SelectItem value="1">Start: Mon</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <Button variant="outline" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => changeDate(-7)}>
                                     <ChevronLeft className="w-3.5 h-3.5" />
                                 </Button>
