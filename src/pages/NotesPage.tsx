@@ -5,8 +5,18 @@ import {
     Pin, PinOff, CheckSquare, Eye, EyeOff, Bold, Italic, Heading,
     ChevronRight, ChevronDown, Calendar, AlertCircle, Sparkles, Filter,
     Check, List, ListChecks, Copy, Edit3, Loader2, Send, X,
-    Archive, ArchiveRestore, Palette, MoreHorizontal, Undo2, ArrowUpDown, Maximize2, Image as ImageIcon, SlidersHorizontal
+    Archive, ArchiveRestore, Palette, MoreHorizontal, MoreVertical, Undo2, ArrowUpDown, Maximize2, Image as ImageIcon, SlidersHorizontal
 } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
 import { uploadImage } from "../services/imageUpload";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -137,6 +147,14 @@ function RichNoteView({ content, onToggleCheckbox }: { content: string; onToggle
                 if (h1Match) return <h2 key={i} className="text-base font-bold mt-2 mb-0.5">{renderInlineFormatting(h1Match[1])}</h2>;
                 const h2Match = line.match(/^##\s+(.*)/);
                 if (h2Match) return <h3 key={i} className="text-sm font-semibold mt-1.5 mb-0.5">{renderInlineFormatting(h2Match[1])}</h3>;
+                const h3Match = line.match(/^###\s+(.*)/);
+                if (h3Match) return <h4 key={i} className="text-xs font-bold mt-1 mb-0.5 text-foreground/80">{renderInlineFormatting(h3Match[1])}</h4>;
+                const h4Match = line.match(/^####\s+(.*)/);
+                if (h4Match) return <h5 key={i} className="text-[11px] font-bold mt-1 mb-0.5 text-foreground/70">{renderInlineFormatting(h4Match[1])}</h5>;
+                const h5Match = line.match(/^#####\s+(.*)/);
+                if (h5Match) return <h6 key={i} className="text-[10px] font-bold mt-1 mb-0.5 text-foreground/60 uppercase tracking-wider">{renderInlineFormatting(h5Match[1])}</h6>;
+                const h6Match = line.match(/^######\s+(.*)/);
+                if (h6Match) return <h6 key={i} className="text-[10px] font-medium mt-1 mb-0.5 text-foreground/50 uppercase tracing-widest">{renderInlineFormatting(h6Match[1])}</h6>;
 
                 const bulletMatch = line.match(/^\s*[-*]\s+(.*)/);
                 if (bulletMatch) {
@@ -683,7 +701,6 @@ function NoteCard({ note, serialNumber, onSelect, onExpand, onToggleCheckbox, on
 
 
 
-    const [showColorPicker, setShowColorPicker] = useState(false);
     const stats = getChecklistStats(note.content || "");
     const colorClasses = NOTE_COLORS[note.color] || NOTE_COLORS.default;
 
@@ -713,27 +730,94 @@ function NoteCard({ note, serialNumber, onSelect, onExpand, onToggleCheckbox, on
             )}
         >
             <div className="p-4">
-                {/* Header: Title + Expand/Edit buttons */}
-                <div className="flex items-start justify-between gap-2">
+                {/* Header: Title + Actions */}
+                <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
                         {note.title && (
-                            <h3 className="font-semibold text-base text-foreground leading-snug truncate">{note.title}</h3>
+                            <h3 className="font-semibold text-sm sm:text-base text-foreground leading-snug truncate">{note.title}</h3>
+                        )}
+                        {!!note.is_pinned && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                                <Pin className="w-3 h-3 text-primary fill-primary" />
+                                <span className="text-[10px] text-primary font-medium">Pinned</span>
+                            </div>
                         )}
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                        {!!note.is_pinned && <Pin className="w-3 h-3 text-primary fill-primary" />}
-                        <span className="text-[10px] font-semibold text-muted-foreground/60 bg-black/5 dark:bg-white/5 rounded-full w-5 h-5 flex items-center justify-center">#{serialNumber}</span>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); onSelect(); }} title="Edit note">
-                            <Edit3 className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                            variant="ghost" size="icon"
-                            className="h-7 w-7 rounded-full text-muted-foreground hover:text-primary transition-transform hover:scale-110"
-                            onClick={(e) => { e.stopPropagation(); onExpand(); }}
+
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <span className="w-7 h-7 rounded-full bg-muted/60 dark:bg-white/10 flex items-center justify-center text-[10px] font-bold text-muted-foreground">#{serialNumber}</span>
+                        <button
+                            className="w-7 h-7 rounded-full bg-muted/60 dark:bg-white/10 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all hover:scale-110"
+                            onClick={onExpand}
                             title="Expand to popup"
                         >
                             <Maximize2 className="w-3.5 h-3.5" />
-                        </Button>
+                        </button>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button className="w-7 h-7 rounded-full bg-muted/60 dark:bg-white/10 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all">
+                                    <MoreVertical className="w-3.5 h-3.5" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={onSelect}>
+                                    <Edit3 className="w-4 h-4 mr-2" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={onTogglePin}>
+                                    {note.is_pinned ? <PinOff className="w-4 h-4 mr-2" /> : <Pin className="w-4 h-4 mr-2" />}
+                                    {note.is_pinned ? "Unpin" : "Pin"}
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger>
+                                        <Palette className="w-4 h-4 mr-2" /> Color
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuSubContent className="p-1">
+                                        <div className="grid grid-cols-4 gap-1 p-1">
+                                            {(Object.keys(NOTE_COLORS) as NoteColor[]).map(color => {
+                                                const c = NOTE_COLORS[color];
+                                                return (
+                                                    <button
+                                                        key={color}
+                                                        onClick={() => onColorChange(color)}
+                                                        title={c.label}
+                                                        className={cn(
+                                                            "w-6 h-6 rounded-full border transition-all hover:scale-110",
+                                                            c.light,
+                                                            note.color === color ? "border-primary ring-1 ring-primary/30" : "border-transparent"
+                                                        )}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+
+                                <DropdownMenuSeparator />
+                                {viewMode !== "trash" ? (
+                                    <>
+                                        <DropdownMenuItem onClick={onArchive}>
+                                            {note.is_archived ? <ArchiveRestore className="w-4 h-4 mr-2" /> : <Archive className="w-4 h-4 mr-2" />}
+                                            {note.is_archived ? "Unarchive" : "Archive"}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={onTrash} className="text-destructive focus:text-destructive">
+                                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                        </DropdownMenuItem>
+                                    </>
+                                ) : (
+                                    <>
+                                        <DropdownMenuItem onClick={onTrash}>
+                                            <Undo2 className="w-4 h-4 mr-2" /> Restore
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={onTrash} className="text-destructive focus:text-destructive">
+                                            <Trash2 className="w-4 h-4 mr-2" /> Build forever
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
 
@@ -742,7 +826,7 @@ function NoteCard({ note, serialNumber, onSelect, onExpand, onToggleCheckbox, on
                     <p className="text-sm text-muted-foreground mt-1.5 line-clamp-1 whitespace-pre-line leading-relaxed">{previewText}</p>
                 )}
 
-                {/* Checklist Progress - always visible */}
+                {/* Checklist Progress */}
                 {stats && (
                     <div className="mt-2">
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
@@ -757,12 +841,12 @@ function NoteCard({ note, serialNumber, onSelect, onExpand, onToggleCheckbox, on
 
                 {/* Tags */}
                 {note.tags && (
-                    <div className="flex flex-wrap gap-1 mt-2.5">
-                        {note.tags.split(",").slice(0, 3).map((t, i) => {
+                    <div className="flex flex-nowrap gap-1 mt-2.5 overflow-x-auto no-scrollbar mask-fade-right">
+                        {note.tags.split(",").map((t, i) => {
                             const trimmed = t.trim();
                             if (!trimmed) return null;
                             return (
-                                <span key={i} className={cn("text-[10px] px-2 py-0.5 rounded-full border", getTagColor(trimmed))}>
+                                <span key={i} className={cn("text-[10px] px-2 py-0.5 rounded-full border shrink-0", getTagColor(trimmed))}>
                                     #{trimmed}
                                 </span>
                             );
@@ -770,50 +854,6 @@ function NoteCard({ note, serialNumber, onSelect, onExpand, onToggleCheckbox, on
                     </div>
                 )}
             </div>
-
-            {/* Actions Bar */}
-            <div className="flex items-center justify-between px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity border-t border-black/[0.04] dark:border-white/[0.04]">
-                <div className="flex items-center gap-0.5">
-                    {viewMode === "notes" && (
-                        <>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => onTogglePin()} title={note.is_pinned ? "Unpin" : "Pin"}>
-                                {note.is_pinned ? <PinOff className="w-3.5 h-3.5 text-primary" /> : <Pin className="w-3.5 h-3.5" />}
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setShowColorPicker(!showColorPicker)} title="Color">
-                                <Palette className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => onArchive()} title="Archive">
-                                <Archive className="w-3.5 h-3.5" />
-                            </Button>
-                        </>
-                    )}
-                    {viewMode === "archive" && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => onArchive()} title="Unarchive">
-                            <ArchiveRestore className="w-3.5 h-3.5" />
-                        </Button>
-                    )}
-                    {viewMode === "trash" && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => onTrash()} title="Restore">
-                            <Undo2 className="w-3.5 h-3.5" />
-                        </Button>
-                    )}
-                </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:text-destructive" onClick={() => onTrash()} title={viewMode === "trash" ? "Delete Forever" : "Delete"}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-            </div>
-
-            {/* Inline Color Picker */}
-            <AnimatePresence>
-                {showColorPicker && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden border-t border-black/[0.04] dark:border-white/[0.04]"
-                    >
-                        <ColorPicker currentColor={note.color} onColorChange={(c) => { onColorChange(c); setShowColorPicker(false); }} />
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </motion.div>
     );
 }
@@ -826,8 +866,7 @@ function useMasonryColumns() {
     useEffect(() => {
         const updateColumns = () => {
             const width = window.innerWidth;
-            if (width >= 1280) setColumns(4);      // xl
-            else if (width >= 1024) setColumns(3); // lg
+            if (width >= 1024) setColumns(3);      // lg+
             else if (width >= 640) setColumns(2);  // sm
             else setColumns(1);                    // default
         };
@@ -1062,7 +1101,7 @@ export default function NotesPage() {
 
                 {/* ===== TAG FILTER ===== */}
                 {viewMode === "notes" && allTags.length > 0 && (
-                    <div className="flex flex-nowrap sm:flex-wrap gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+                    <div className="flex flex-nowrap gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 no-scrollbar -mx-1 px-1 mask-fade-right">
                         <Button variant={!activeTag ? "default" : "outline"} size="sm" className="text-xs h-7 sm:h-8 rounded-full shrink-0" onClick={() => setActiveTag(null)}>All</Button>
                         {allTags.map(tag => (
                             <Button key={tag} variant={activeTag === tag ? "default" : "outline"} size="sm" className="text-xs h-7 sm:h-8 rounded-full shrink-0" onClick={() => setActiveTag(activeTag === tag ? null : tag)}>

@@ -114,6 +114,11 @@
     --gradient-start: 187 85% 53%;
     --gradient-end: 199 89% 58%;
   }
+
+  .mask-fade-right {
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  }
 }
 
 @layer base {
