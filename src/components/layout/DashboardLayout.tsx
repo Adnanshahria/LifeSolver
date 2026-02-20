@@ -6,9 +6,11 @@ import { GlobalSearch } from "../ui/GlobalSearch";
 import { AnimatedPage } from "./AnimatedPage";
 import { AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router-dom";
+import { useState } from "react";
 
 export function DashboardLayout() {
     const location = useLocation();
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     return (
         <div className="min-h-screen bg-background">
@@ -19,10 +21,10 @@ export function DashboardLayout() {
             </div>
 
             {/* Sidebar - Desktop only */}
-            <Sidebar />
+            <Sidebar isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed} />
 
             {/* Main content */}
-            <main className="md:ml-64 min-h-screen md:pb-8 mobile-fixed-layout">
+            <main className={`transition-all duration-300 ${isSidebarCollapsed ? "md:ml-20" : "md:ml-64"} min-h-screen md:pb-8 mobile-fixed-layout`}>
                 <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pt-4 sm:pt-6 md:pt-6 pb-24 md:pb-8">
                     <AnimatePresence mode="wait">
                         <AnimatedPage key={location.pathname}>
