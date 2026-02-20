@@ -300,13 +300,12 @@ export default function StudyPage() {
                         </div>
 
                         {/* Manage Presets button */}
-                        <Button variant="ghost" size="sm" className="h-7 w-auto px-2.5 gap-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => {
-                            if (filterSubject !== "all") setSelectedPresetSubjectId(filterSubject);
-                            else if (study.subjects.length > 0) setSelectedPresetSubjectId(study.subjects[0].id);
+                        <Button className="w-full sm:w-auto h-9 text-xs sm:text-sm" variant="secondary" onClick={() => {
+                            setSelectedPresetSubjectId("");
                             setManagePresetsOpen(true);
-                        }} title="Manage Common Presets">
-                            <Settings className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Presets</span>
+                        }} title="Manage Chapter Templates">
+                            <Settings className="w-4 h-4 mr-2" />
+                            <span className="hidden sm:inline">Templates</span>
                         </Button>
 
                         {/* Add Subject button */}
@@ -485,7 +484,7 @@ export default function StudyPage() {
                                                                 <FolderPlus className="mr-2 h-4 w-4" /> Add Chapter
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => { setSelectedPresetSubjectId(subject.id); setManagePresetsOpen(true); }}>
-                                                                <Settings className="mr-2 h-4 w-4" /> Manage Presets
+                                                                <Settings className="mr-2 h-4 w-4" /> Manage Templates
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => openEditSubject(subject)}>
                                                                 <Pencil className="mr-2 h-4 w-4" /> Rename Subject
@@ -870,8 +869,8 @@ export default function StudyPage() {
             <Dialog open={managePresetsOpen} onOpenChange={setManagePresetsOpen}>
                 <DialogContent className="w-[95vw] max-w-lg rounded-2xl sm:rounded-xl h-[80vh] flex flex-col">
                     <DialogHeader>
-                        <DialogTitle>Manage Common Presets</DialogTitle>
-                        <DialogDescription>Define standard parts for your subjects. These can be auto-added to new chapters.</DialogDescription>
+                        <DialogTitle>Manage Chapter Templates</DialogTitle>
+                        <DialogDescription>Create templates (like "Read Chapter", "Take Notes") to save time when setting up your study plan.</DialogDescription>
                     </DialogHeader>
 
                     <div className="flex-1 overflow-hidden flex flex-col gap-4">
@@ -898,13 +897,13 @@ export default function StudyPage() {
                                         className={`pb-1 text-sm font-medium transition-colors ${activePresetTab === "chapter" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
                                         onClick={() => { setActivePresetTab("chapter"); setNewPresetParentId(null); }}
                                     >
-                                        Chapter Defaults
+                                        Auto-Add to New Chapters
                                     </button>
                                     <button
                                         className={`pb-1 text-sm font-medium transition-colors ${activePresetTab === "part" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
                                         onClick={() => { setActivePresetTab("part"); setNewPresetParentId(null); setSelectedPresetIds(new Set()); setSelectedTargetChapterId(""); setSelectedTargetPartId(""); }}
                                     >
-                                        Sub-Chapters
+                                        Add to Existing Chapter
                                     </button>
                                 </div>
 
@@ -912,8 +911,8 @@ export default function StudyPage() {
                                 <div className="space-y-3 mb-4">
                                     <p className="text-xs text-muted-foreground">
                                         {activePresetTab === "chapter"
-                                            ? "These parts are automatically added to every NEW chapter you create."
-                                            : "Select sub-chapters to add to a specific chapter."}
+                                            ? "These templates will be automatically added every time you create a new chapter."
+                                            : "Manually insert these reusable parts into any chapter you've already created."}
                                     </p>
 
                                     {activePresetTab === "part" && (
@@ -949,7 +948,7 @@ export default function StudyPage() {
                                 {/* Add New Preset */}
                                 <div className="p-3 bg-secondary/30 rounded-lg space-y-3 border border-border/50">
                                     <h4 className="text-sm font-medium flex items-center justify-between">
-                                        <span>Create New {activePresetTab === "chapter" ? "Default" : "Sub-Chapter"}</span>
+                                        <span>Create New {activePresetTab === "chapter" ? "Template" : "Reusable Part"}</span>
                                         {newPresetParentId && (
                                             <Badge variant="secondary" className="text-xs gap-1">
                                                 Child of: {study.commonPresets?.find(p => p.id === newPresetParentId)?.name}
@@ -992,14 +991,14 @@ export default function StudyPage() {
                                 {/* Preset List */}
                                 <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1 mt-4">
                                     <h4 className="text-sm font-medium sticky top-0 bg-background pb-2 z-10 flex items-center justify-between">
-                                        <span>Existing {activePresetTab === "chapter" ? "Defaults" : "Sub-Chapters"}</span>
+                                        <span>Existing {activePresetTab === "chapter" ? "Templates" : "Reusable Parts"}</span>
                                         <Badge variant="secondary" className="text-[10px] h-5">
                                             {study.commonPresets?.filter(p => p.subject_id === selectedPresetSubjectId && (p.preset_type === activePresetTab || (!p.preset_type && activePresetTab === "chapter"))).length || 0}
                                         </Badge>
                                     </h4>
                                     {study.commonPresets?.filter(p => p.subject_id === selectedPresetSubjectId && !p.parent_id && (p.preset_type === activePresetTab || (!p.preset_type && activePresetTab === "chapter"))).length === 0 ? (
                                         <div className="text-center py-8 text-muted-foreground text-sm border-2 border-dashed rounded-lg">
-                                            No {activePresetTab === "chapter" ? "defaults" : "sub-chapters"} defined.
+                                            No {activePresetTab === "chapter" ? "templates" : "reusable parts"} defined.
                                         </div>
                                     ) : (
                                         study.commonPresets?.filter(p => p.subject_id === selectedPresetSubjectId && !p.parent_id && (p.preset_type === activePresetTab || (!p.preset_type && activePresetTab === "chapter"))).map(preset => (
@@ -1030,15 +1029,15 @@ export default function StudyPage() {
                                                 variant="outline"
                                                 className="w-full text-xs"
                                                 onClick={() => {
-                                                    if (confirm("This will add missing DEFAULT presets to ALL existing chapters in this subject. Continue?")) {
+                                                    if (confirm("This will add missing templates to ALL existing chapters in this subject. Continue?")) {
                                                         study.applyPresetsToAllChapters.mutate(selectedPresetSubjectId);
-                                                        toast({ title: "Presets applied!" });
+                                                        toast({ title: "Templates applied!" });
                                                     }
                                                 }}
                                                 disabled={study.applyPresetsToAllChapters.isPending}
                                             >
                                                 <FolderPlus className="w-3.5 h-3.5 mr-2" />
-                                                Apply Defaults to All Existing Chapters
+                                                Add these to all my existing chapters
                                             </Button>
                                             <p className="text-[10px] text-muted-foreground mt-2 text-center">
                                                 New chapters created in this subject will automatically include these parts.
@@ -1054,13 +1053,13 @@ export default function StudyPage() {
                                                     presetIds: Array.from(selectedPresetIds),
                                                     targetPartId: selectedTargetPartId === "root" ? undefined : selectedTargetPartId
                                                 });
-                                                toast({ title: "Sub-Chapters added!" });
+                                                toast({ title: "Parts added!" });
                                                 setSelectedPresetIds(new Set());
                                             }}
                                             disabled={!selectedTargetChapterId || selectedPresetIds.size === 0 || study.addPresetsToChapter.isPending}
                                         >
                                             <FolderPlus className="w-3.5 h-3.5 mr-2" />
-                                            Add {Array.from(selectedPresetIds).length} Sub-Chapters to {selectedTargetPartId === "all-parts" ? "All Top-Level Parts" : (selectedTargetPartId && selectedTargetPartId !== "root" ? "Target Part" : "Chapter Root")}
+                                            Add {Array.from(selectedPresetIds).length} parts to {selectedTargetPartId === "all-parts" ? "All Top-Level Parts" : (selectedTargetPartId && selectedTargetPartId !== "root" ? "Target Part" : "Chapter Root")}
                                         </Button>
                                     )}
                                 </div>
