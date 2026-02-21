@@ -326,7 +326,7 @@ export default function LoginPage() {
                                 Continue with Google
                             </div>
                             {/* Real Google button — invisible but receives clicks */}
-                            <div className="absolute inset-0 z-20 opacity-0 cursor-pointer [&>div]:!w-full [&>div]:!h-full [&_iframe]:!w-full [&_iframe]:!h-full [&_div[role=button]]:!h-full">
+                            <div className="absolute inset-x-0 inset-y-[-10px] z-20 opacity-0.01 cursor-pointer overflow-hidden flex items-center justify-center [&>div]:!w-full [&>div]:!min-w-full [&>div]:!h-full [&>div]:!min-h-full [&_iframe]:!w-full [&_iframe]:!min-w-full [&_iframe]:!h-[60px] [&_div[role=button]]:!h-full [&_div[role=button]]:!w-full">
                                 <GoogleLogin
                                     onSuccess={handleGoogleSuccess}
                                     onError={() => setError("Google Sign In Failed")}

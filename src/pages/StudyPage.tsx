@@ -389,17 +389,18 @@ export default function StudyPage() {
                             subChapters.forEach(ch => {
                                 const chParts = study.partsByChapter[ch.id] || [];
                                 chParts.forEach(p => {
-                                    subjectTotalMinutes += p.estimated_minutes;
+                                    const mins = Number(p.estimated_minutes) || 30;
+                                    subjectTotalMinutes += mins;
                                     if (p.status === "completed") {
-                                        subjectCompletedMinutes += p.estimated_minutes;
+                                        subjectCompletedMinutes += mins;
                                     } else if (p.status === "in-progress") {
-                                        subjectCompletedMinutes += (p.estimated_minutes * 0.5);
+                                        subjectCompletedMinutes += (mins * 0.5);
                                     }
                                 });
                             });
 
                             const subjectRemainingMinutes = subjectTotalMinutes - subjectCompletedMinutes;
-                            const progress = subjectTotalMinutes > 0 ? Math.round((subjectCompletedMinutes / subjectTotalMinutes) * 100) : 0;
+                            const progress = study.subjectProgress[subject.id] || 0;
 
                             const formatDuration = (mins: number) => {
                                 const rounded = Math.ceil(mins);
@@ -530,16 +531,17 @@ export default function StudyPage() {
                                                             let chTotalMinutes = 0;
                                                             let chCompletedMinutes = 0;
                                                             chParts.forEach(p => {
-                                                                chTotalMinutes += p.estimated_minutes;
+                                                                const mins = Number(p.estimated_minutes) || 30;
+                                                                chTotalMinutes += mins;
                                                                 if (p.status === "completed") {
-                                                                    chCompletedMinutes += p.estimated_minutes;
+                                                                    chCompletedMinutes += mins;
                                                                 } else if (p.status === "in-progress") {
-                                                                    chCompletedMinutes += (p.estimated_minutes * 0.5);
+                                                                    chCompletedMinutes += (mins * 0.5);
                                                                 }
                                                             });
 
                                                             const chRemainingMinutes = chTotalMinutes - chCompletedMinutes;
-                                                            const chProgress = chTotalMinutes > 0 ? Math.round((chCompletedMinutes / chTotalMinutes) * 100) : 0;
+                                                            const chProgress = study.chapterProgress[chapter.id] || 0;
 
                                                             return (
                                                                 <motion.div
