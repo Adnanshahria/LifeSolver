@@ -782,18 +782,20 @@ ${items?.map(i => `- ${i.item_name} (x${i.quantity}) [${i.category || 'uncategor
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 100, scale: 0.95 }}
                             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                            className={`fixed left-0 right-0 bottom-0 md:inset-auto md:bottom-6 md:right-6 z-50 ${keyboardOpen ? '' : 'rounded-t-3xl'
+                            className={`fixed left-0 right-0 bottom-0 md:inset-auto md:bottom-6 md:right-6 z-50 ${keyboardOpen ? 'rounded-t-none' : 'rounded-t-3xl'
                                 } md:rounded-2xl overflow-hidden`}
                             style={isMobile ? {
                                 height: viewportHeight ? viewportHeight : '90dvh',
-                                maxHeight: keyboardOpen ? undefined : '90dvh'
+                                maxHeight: keyboardOpen ? undefined : '90dvh',
+                                transitionProperty: 'height, max-height, border-radius',
+                                transitionDuration: '300ms',
+                                transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)'
                             } : undefined}
                         >
-                            <div className={`w-full md:w-[400px] h-full md:h-[600px] md:max-h-[80vh] flex flex-col bg-background md:glass-card overflow-hidden shadow-2xl ${keyboardOpen ? 'border-x border-primary/20' : 'border border-primary/20 md:rounded-2xl'
-                                }`}>
+                            <div className={`w-full md:w-[400px] h-full md:h-[600px] md:max-h-[80vh] flex flex-col bg-background md:glass-card overflow-hidden shadow-2xl ${keyboardOpen ? 'border-none' : 'border border-primary/20 md:rounded-2xl'
+                                }`} style={{ transition: 'border-radius 300ms cubic-bezier(0.32, 0.72, 0, 1), border 300ms ease' }}>
                                 {/* Header */}
-                                <div className={`px-5 py-4 bg-background flex items-center justify-between z-10 relative shadow-sm ${keyboardOpen ? 'border-b border-border/20' : 'border-b border-border/20'
-                                    }`}>
+                                <div className="px-5 py-4 bg-background flex items-center justify-between z-10 relative shadow-sm border-b border-border/20">
                                     <div className="flex flex-col">
                                         <h3 className="font-bold text-[15px] tracking-tight text-foreground">LifeSolver AI</h3>
                                         <div className="flex items-center gap-1.5 mt-0.5">
@@ -895,7 +897,12 @@ ${items?.map(i => `- ${i.item_name} (x${i.quantity}) [${i.category || 'uncategor
                                 </div>
 
                                 {/* Input Area */}
-                                <form onSubmit={handleSend} className="p-3 md:p-4 bg-background border-t border-border/20 relative z-20" style={{ paddingBottom: isMobile ? (keyboardOpen ? '0.75rem' : 'max(1.5rem, env(safe-area-inset-bottom))') : undefined }}>
+                                <form onSubmit={handleSend} className="p-3 md:p-4 bg-background border-t border-border/20 relative z-20" style={{
+                                    paddingBottom: isMobile ? (keyboardOpen ? '0.75rem' : 'max(1.5rem, env(safe-area-inset-bottom))') : undefined,
+                                    transitionProperty: 'padding-bottom',
+                                    transitionDuration: '300ms',
+                                    transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)'
+                                }}>
                                     <div className="flex items-end gap-2.5">
                                         <textarea
                                             value={input}
