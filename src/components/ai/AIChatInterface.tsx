@@ -90,9 +90,31 @@ export function AIChatInterface() {
     const [isLoading, setIsLoading] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+    const [showMenu, setShowMenu] = useState(false);
+    const [language, setLanguage] = useState<"en" | "bn">("en");
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+    // Detect if keyboard is open (viewport significantly smaller than window)
+    const keyboardOpen = isMobile && viewportHeight !== null && viewportHeight < window.innerHeight * 0.75;
+
+    // Lock body scroll when chat is open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+            setShowMenu(false);
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [isOpen]);
+
+    const clearConversation = () => {
+        setMessages([]);
+        localStorage.removeItem("lifeos-chat-history");
+        setShowMenu(false);
+    };
 
     // Hooks for executing actions
     const { addTask, updateTask, deleteTask, completeTask, tasks } = useTasks();
@@ -755,31 +777,78 @@ ${items?.map(i => `- ${i.item_name} (x${i.quantity}) [${i.category || 'uncategor
                             onClick={() => setIsOpen(false)}
                         />
 
-                        {/* Chat Window Container - centers on mobile, positions bottom-right on desktop */}
+                        {/* Chat Window Container - 90dvh bottom sheet on mobile, bottom-right on desktop */}
                         <motion.div
-                            initial={{ opacity: 0, y: 100, scale: 0.9 }}
+                            initial={{ opacity: 0, y: 100, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 100, scale: 0.9 }}
-                            className="fixed inset-0 md:inset-auto md:bottom-6 md:right-6 z-50 md:block"
-                            style={isMobile && viewportHeight ? { height: viewportHeight, top: 'auto', bottom: 0 } : undefined}
+                            exit={{ opacity: 0, y: 100, scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                            className={`fixed left-0 right-0 bottom-0 md:inset-auto md:bottom-6 md:right-6 z-50 ${keyboardOpen ? '' : 'rounded-t-3xl'
+                                } md:rounded-2xl overflow-hidden`}
+                            style={isMobile ? {
+                                height: viewportHeight ? viewportHeight : '90dvh',
+                                maxHeight: keyboardOpen ? undefined : '90dvh'
+                            } : undefined}
                         >
-                            <div className="w-full md:w-[400px] h-full md:h-[600px] md:max-h-[80vh] flex flex-col glass-card md:rounded-2xl overflow-hidden shadow-2xl border border-primary/20">
+                            <div className={`w-full md:w-[400px] h-full md:h-[600px] md:max-h-[80vh] flex flex-col bg-background md:glass-card overflow-hidden shadow-2xl ${keyboardOpen ? 'border-x border-primary/20' : 'border border-primary/20 md:rounded-2xl'
+                                }`}>
                                 {/* Header */}
-                                <div className="px-5 py-4 border-b border-border/20 bg-background flex items-center justify-between z-10 relative shadow-sm">
+                                <div className={`px-5 py-4 bg-background flex items-center justify-between z-10 relative shadow-sm ${keyboardOpen ? 'border-b border-border/20' : 'border-b border-border/20'
+                                    }`}>
                                     <div className="flex flex-col">
-                                        <h3 className="font-bold text-[15px] tracking-tight text-foreground">ORBIT AI Assistant</h3>
+                                        <h3 className="font-bold text-[15px] tracking-tight text-foreground">LifeSolver AI</h3>
                                         <div className="flex items-center gap-1.5 mt-0.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                                            <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase">ONLINE</span>
+                                            <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 2 }} className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                            <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase">{language === 'bn' ? 'অনলাইন' : 'ONLINE'}</span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <button className="flex items-center gap-1 px-3 py-1.5 border border-border/50 rounded-full hover:bg-secondary/50 transition-colors">
-                                            <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                                            <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                                        </button>
+                                    <div className="flex items-center">
+                                        <div className="flex items-center gap-1 px-2.5 py-1.5 border border-border/50 rounded-full">
+                                            <button onClick={() => setShowMenu(!showMenu)} className="hover:bg-secondary/50 rounded-full p-0.5 transition-colors">
+                                                <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                            </button>
+                                            <button onClick={() => setIsOpen(false)} className="hover:bg-secondary/50 rounded-full p-0.5 transition-colors">
+                                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+
+                                {/* Dropdown Menu */}
+                                <AnimatePresence>
+                                    {showMenu && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute top-[60px] left-0 right-0 z-[210] bg-background border-b border-border/30 shadow-lg px-5 py-4 space-y-3"
+                                        >
+                                            {/* Language Toggle */}
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-semibold text-muted-foreground">Language</span>
+                                                <div className="flex items-center bg-secondary/60 rounded-full p-0.5 border border-border/30">
+                                                    <button
+                                                        onClick={() => { setLanguage('en'); setShowMenu(false); }}
+                                                        className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${language === 'en' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                                    >English</button>
+                                                    <button
+                                                        onClick={() => { setLanguage('bn'); setShowMenu(false); }}
+                                                        className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${language === 'bn' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                                    >বাংলা</button>
+                                                </div>
+                                            </div>
+                                            {/* Clear Conversation */}
+                                            <button
+                                                onClick={clearConversation}
+                                                className="flex items-center gap-2 w-full py-2 px-1 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                                <span className="text-xs font-semibold">{language === 'bn' ? 'কথোপকথন মুছুন' : 'Clear Conversation'}</span>
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
 
                                 {/* Messages Area */}
                                 <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -859,7 +928,7 @@ ${items?.map(i => `- ${i.item_name} (x${i.quantity}) [${i.category || 'uncategor
                                 </div>
 
                                 {/* Input Area */}
-                                <form onSubmit={handleSend} className="p-3 md:p-4 bg-background border-t border-border/20 relative z-20" style={{ paddingBottom: isMobile ? 'max(0.75rem, env(safe-area-inset-bottom))' : undefined }}>
+                                <form onSubmit={handleSend} className="p-3 md:p-4 bg-background border-t border-border/20 relative z-20" style={{ paddingBottom: isMobile ? (keyboardOpen ? '0.75rem' : 'max(1.5rem, env(safe-area-inset-bottom))') : undefined }}>
                                     <div className="flex items-end gap-2.5">
                                         <textarea
                                             value={input}
@@ -874,7 +943,8 @@ ${items?.map(i => `- ${i.item_name} (x${i.quantity}) [${i.category || 'uncategor
                                                     handleSend();
                                                 }
                                             }}
-                                            placeholder="Ask me anything about our services..."
+                                            placeholder={language === 'bn' ? 'আমাকে কিছু জিজ্ঞেস করুন...' : 'Ask me anything about our services...'}
+                                            autoFocus={false}
                                             className="flex-1 bg-primary/5 border border-primary/20 rounded-2xl py-3.5 px-4 text-[13.5px] focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all resize-none min-h-[48px] max-h-[120px] font-medium placeholder:text-muted-foreground"
                                             disabled={isLoading}
                                             rows={1}

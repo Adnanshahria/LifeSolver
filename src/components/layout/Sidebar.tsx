@@ -46,8 +46,8 @@ const mainNavItems = [
 
 const secondaryNavItems = [
   { icon: Settings, label: "Settings", path: "/settings" },
-  { icon: Flag, label: "Report", path: "#" },
-  { icon: HeadphonesIcon, label: "Support", path: "#" },
+  { icon: Flag, label: "Report", path: "https://wa.me/8801602226032", external: true },
+  { icon: HeadphonesIcon, label: "Support", path: "https://wa.me/8801602226032", external: true },
 ];
 
 interface NavItemProps {
@@ -57,50 +57,63 @@ interface NavItemProps {
     path: string;
     badge?: string;
     badgeType?: string;
+    external?: boolean;
   };
   isCollapsed: boolean;
   isActive: boolean;
 }
 
 function NavItem({ item, isCollapsed, isActive }: NavItemProps) {
+  const content = (
+    <div className={cn(
+      "flex items-center gap-3 transition-all group relative my-1",
+      "border rounded-2xl shadow-sm",
+      isActive
+        ? "bg-primary/10 border-primary text-primary dark:bg-primary/20"
+        : "bg-secondary/40 border-border hover:bg-secondary/80 hover:border-border/80 text-muted-foreground hover:text-foreground",
+      isCollapsed
+        ? "justify-center px-0 w-[42px] h-[42px] mx-auto"
+        : "px-3 py-2.5"
+    )}>
+      <item.icon className={cn("w-[18px] h-[18px] shrink-0 transition-colors", isActive ? "text-primary dark:text-primary" : "")} />
+
+      {!isCollapsed && (
+        <>
+          <span className={cn("text-sm transition-all flex-1 text-left", isActive && "font-medium")}>
+            {item.label}
+          </span>
+          {item.badge && (
+            <div className={cn(
+              "text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[24px] flex items-center justify-center shrink-0 z-10",
+              item.badgeType === "primary" ? "bg-red-500 text-white shadow-sm" : "bg-secondary text-muted-foreground",
+              isActive ? "mr-6" : ""
+            )}>
+              {item.badge}
+            </div>
+          )}
+          {isActive && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 z-0">
+              <ChevronRight className="w-4 h-4 text-primary opacity-80" />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  if (item.external) {
+    return (
+      <a href={item.path} target="_blank" rel="noreferrer" title={isCollapsed ? item.label : undefined}>
+        {content}
+      </a>
+    );
+  }
+
   return (
     <Link to={item.path} title={isCollapsed ? item.label : undefined}>
-      <div className={cn(
-        "flex items-center gap-3 transition-all group relative my-1",
-        "border rounded-2xl shadow-sm",
-        isActive
-          ? "bg-primary/10 border-primary text-primary dark:bg-primary/20"
-          : "bg-secondary/40 border-border hover:bg-secondary/80 hover:border-border/80 text-muted-foreground hover:text-foreground",
-        isCollapsed
-          ? "justify-center px-0 w-[42px] h-[42px] mx-auto"
-          : "px-3 py-2.5"
-      )}>
-        <item.icon className={cn("w-[18px] h-[18px] shrink-0 transition-colors", isActive ? "text-primary dark:text-primary" : "")} />
-
-        {!isCollapsed && (
-          <>
-            <span className={cn("text-sm transition-all flex-1 text-left", isActive && "font-medium")}>
-              {item.label}
-            </span>
-            {item.badge && (
-              <div className={cn(
-                "text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[24px] flex items-center justify-center shrink-0 z-10",
-                item.badgeType === "primary" ? "bg-red-500 text-white shadow-sm" : "bg-secondary text-muted-foreground",
-                isActive ? "mr-6" : ""
-              )}>
-                {item.badge}
-              </div>
-            )}
-            {isActive && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 z-0">
-                <ChevronRight className="w-4 h-4 text-primary opacity-80" />
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      {content}
     </Link>
-  )
+  );
 }
 
 interface SidebarProps {
