@@ -166,6 +166,7 @@ export default function LoginPage() {
                                 useOneTap
                                 shape="rectangular"
                                 theme="filled_black"
+                                ux_mode="redirect"
                             />
                         </div>
                     </form>

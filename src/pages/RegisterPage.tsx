@@ -217,9 +217,11 @@ export default function RegisterPage() {
                         <div className="flex justify-center w-full">
                             <GoogleLogin
                                 onSuccess={handleGoogleSuccess}
-                                onError={() => setError("Google Sign Up Failed")}
+                                onError={() => setError("Google Registration Failed")}
+                                useOneTap
                                 shape="rectangular"
                                 theme="filled_black"
+                                ux_mode="redirect"
                             />
                         </div>
                     </form>
