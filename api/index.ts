@@ -2,12 +2,15 @@ import express from "express";
 import cors from "cors";
 import { createClient } from "@libsql/client";
 import * as dotenv from "dotenv";
-import { join } from "path";
+import path, { join } from "path";
 import crypto from "crypto";
 import { z } from "zod";
 import { sendOtpEmail } from "./smtpService.js";
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-dotenv.config({ path: join(process.cwd(), "..", ".env") });
+// Load .env logically depending on if we are in the api directory locally
+dotenv.config({ path: join(process.cwd(), ".env") });
 
 const app = express();
 app.use(cors());
@@ -276,7 +279,10 @@ app.post("/api/auth/google", async (req, res) => {
     }
 });
 
-const PORT = process.env.VITE_BACKEND_PORT || 4000;
-app.listen(PORT, () => {
-    console.log(`Auth Backend running on port ${PORT}`);
-});
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+// Export the Express API for Vercel Serverless Functions
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // Vercel handles requests differently, so let express consume it
+    return app(req as any, res as any);
+}
