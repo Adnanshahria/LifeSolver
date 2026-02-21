@@ -33,15 +33,15 @@ function getTransporter() {
 
 async function sendOtpEmail(to: string, otp: string, purpose: "registration" | "password_reset") {
     const subject = purpose === "registration"
-        ? "Welcome to LifeHub AI - Verify Your Email"
-        : "LifeHub AI - Password Reset Request";
+        ? "Welcome to LifeSolver.app - Verify Your Email"
+        : "LifeSolver.app - Password Reset Request";
     try {
         await getTransporter().sendMail({
-            from: `"LifeHub AI" <${process.env.VITE_SMTP_USER || "noreply@lifehub.ai"}>`,
+            from: `"LifeSolver.app" <${process.env.VITE_SMTP_USER || "noreply@lifesolver.app"}>`,
             to,
             subject,
             html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;border:1px solid #eee;border-radius:10px">
-                <h2 style="color:#0c4a6e">LifeHub AI</h2>
+                <h2 style="color:#0c4a6e">LifeSolver.app</h2>
                 <p>${purpose === "registration" ? "Thank you for registering!" : "Password reset request received."}</p>
                 <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:15px;border-radius:8px;text-align:center;margin:20px 0">
                     <p style="margin:0;font-size:14px;color:#166534">Your code is</p>
