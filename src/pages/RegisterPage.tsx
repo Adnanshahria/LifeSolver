@@ -192,7 +192,7 @@ export default function RegisterPage() {
 
                     {/* Google Button First */}
                     <div className="mb-6">
-                        <div className="flex justify-center w-full [&>div]:!w-full [&_iframe]:!w-full">
+                        <div className="flex justify-center w-full [&>div]:!w-full [&_iframe]:!w-full [&_div[role=button]]:!rounded-full [&_iframe]:!rounded-full overflow-hidden rounded-full">
                             <GoogleLogin
                                 onSuccess={handleGoogleSuccess}
                                 onError={() => setError("Google Registration Failed")}
@@ -224,7 +224,7 @@ export default function RegisterPage() {
                             <motion.div
                                 initial={{ opacity: 0, y: -8 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-2"
+                                className="p-3.5 rounded-full bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-2 px-5"
                             >
                                 <div className="w-2 h-2 rounded-full bg-destructive shrink-0" />
                                 {error}
@@ -241,7 +241,7 @@ export default function RegisterPage() {
                                 onChange={(e) => setName(e.target.value)}
                                 required
                                 autoComplete="name"
-                                className="h-12 rounded-xl bg-secondary/30 border-border/50 focus:border-primary transition-colors"
+                                className="h-12 rounded-full bg-secondary/30 border-border/50 focus:border-primary transition-colors px-5"
                             />
                         </div>
 
@@ -255,7 +255,7 @@ export default function RegisterPage() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 autoComplete="email"
-                                className="h-12 rounded-xl bg-secondary/30 border-border/50 focus:border-primary transition-colors"
+                                className="h-12 rounded-full bg-secondary/30 border-border/50 focus:border-primary transition-colors px-5"
                             />
                         </div>
 
@@ -270,7 +270,7 @@ export default function RegisterPage() {
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
                                     autoComplete="new-password"
-                                    className="h-12 pr-12 rounded-xl bg-secondary/30 border-border/50 focus:border-primary transition-colors"
+                                    className="h-12 pr-12 rounded-full bg-secondary/30 border-border/50 focus:border-primary transition-colors px-5"
                                 />
                                 <button
                                     type="button"
@@ -292,7 +292,7 @@ export default function RegisterPage() {
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
                                 autoComplete="new-password"
-                                className="h-12 rounded-xl bg-secondary/30 border-border/50 focus:border-primary transition-colors"
+                                className="h-12 rounded-full bg-secondary/30 border-border/50 focus:border-primary transition-colors px-5"
                             />
                         </div>
 
@@ -312,7 +312,7 @@ export default function RegisterPage() {
                             </div>
                         )}
 
-                        <Button type="submit" className="w-full h-12 text-base rounded-xl font-semibold group mt-2" disabled={isLoading || !canSubmit}>
+                        <Button type="submit" className="w-full h-12 text-base rounded-full font-semibold group mt-2" disabled={isLoading || !canSubmit}>
                             {isLoading ? (
                                 <>
                                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
