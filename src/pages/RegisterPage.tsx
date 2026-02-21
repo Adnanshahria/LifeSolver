@@ -47,7 +47,7 @@ export default function RegisterPage() {
         const result = await register(name, email, password);
 
         if (result.success) {
-            navigate("/", { replace: true });
+            navigate(`/verify-otp?email=${encodeURIComponent(email)}`, { replace: true });
         } else {
             setError(result.error || "Registration failed");
         }

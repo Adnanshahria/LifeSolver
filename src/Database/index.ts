@@ -5,7 +5,7 @@ export { db, generateId } from "./client";
 export * from "./schemas";
 
 // Initialize all database tables
-import { initUsersTable, initSettingsTable } from "./schemas/users";
+import { initUsersTable, initSettingsTable, initOtpsTable } from "./schemas/users";
 import { initTasksTable } from "./schemas/tasks";
 import { initFinanceTable } from "./schemas/finance";
 import { initBudgetTable } from "./schemas/budget";
@@ -17,6 +17,7 @@ import { initStudyTable } from "./schemas/study";
 export async function initDatabase(): Promise<void> {
     try {
         await initUsersTable();
+        await initOtpsTable();
         await initSettingsTable();
         await initTasksTable();
         await initHabitsTable();

@@ -19,6 +19,8 @@ import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import WelcomePage from "./pages/WelcomePage";
+import VerifyOtpPage from "./pages/VerifyOtpPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { AnimatedPage } from "./components/layout/AnimatedPage";
 import { AnimatePresence } from "framer-motion";
@@ -62,6 +64,8 @@ const AppContent = () => {
         <Route path="/welcome" element={<AnimatedPage><WelcomePage /></AnimatedPage>} />
         <Route path="/login" element={<AnimatedPage><LoginPage /></AnimatedPage>} />
         <Route path="/register" element={<AnimatedPage><RegisterPage /></AnimatedPage>} />
+        <Route path="/verify-otp" element={<AnimatedPage><VerifyOtpPage /></AnimatedPage>} />
+        <Route path="/forgot-password" element={<AnimatedPage><ForgotPasswordPage /></AnimatedPage>} />
 
         {/* Protected routes under DashboardLayout */}
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
