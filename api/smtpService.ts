@@ -1,20 +1,14 @@
 import nodemailer from "nodemailer";
-import * as dotenv from "dotenv";
-import { join } from "path";
-
-// Load environment variables from frontend root
-dotenv.config({ path: join(process.cwd(), "..", ".env") });
 
 // Create a transporter using environment variables
-// It assumes you'll add VITE_SMTP_HOST, VITE_SMTP_PORT, VITE_SMTP_USER, VITE_SMTP_PASS
-// For default standard testing, you could also use Gmail or similar.
+// Vercel injects env vars automatically in production
 const transporter = nodemailer.createTransport({
     host: process.env.VITE_SMTP_HOST || "smtp.gmail.com",
     port: parseInt(process.env.VITE_SMTP_PORT || "587"),
-    secure: process.env.VITE_SMTP_SECURE === "true", // true for 465, false for 587
+    secure: process.env.VITE_SMTP_SECURE === "true",
     auth: {
-        user: process.env.VITE_SMTP_USER || "your-email@gmail.com",
-        pass: process.env.VITE_SMTP_PASS || "your-app-password",
+        user: process.env.VITE_SMTP_USER || "",
+        pass: process.env.VITE_SMTP_PASS || "",
     },
 });
 

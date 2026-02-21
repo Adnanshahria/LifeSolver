@@ -1,22 +1,13 @@
 import express from "express";
+import type { Request, Response } from "express";
 import cors from "cors";
 import { createClient } from "@libsql/client";
-import * as dotenv from "dotenv";
-import path, { join } from "path";
 import crypto from "crypto";
 import { z } from "zod";
 import { sendOtpEmail } from "./smtpService.js";
-import { fileURLToPath } from 'url';
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { OAuth2Client } from "google-auth-library";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-// Only load .env locally. Vercel automatically injects environment variables.
-if (process.env.NODE_ENV !== 'production') {
-    try {
-        dotenv.config({ path: join(process.cwd(), ".env") });
-    } catch (e) {
-        // Ignore errors in production
-    }
-}
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -31,19 +22,15 @@ function generateId() {
 }
 
 function generateOtp() {
-    return Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+    return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function hashPassword(password: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password + "lifeos-salt-v1");
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+function hashPassword(password: string): string {
+    return crypto.createHash("sha256").update(password + "lifeos-salt-v1").digest("hex");
 }
 
 // 1. Initial Registration (Creates unverified user + sends OTP)
-app.post("/api/auth/register", async (req, res) => {
+app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
         const { name, email, password } = z.object({
             name: z.string().min(1),
@@ -61,7 +48,7 @@ app.post("/api/auth/register", async (req, res) => {
         }
 
         const id = generateId();
-        const passwordHash = await hashPassword(password);
+        const passwordHash = hashPassword(password);
 
         await db.execute({
             sql: "INSERT INTO users (id, name, email, password_hash, is_verified) VALUES (?, ?, ?, ?, 0)",
@@ -73,9 +60,8 @@ app.post("/api/auth/register", async (req, res) => {
             args: [generateId(), id],
         });
 
-        // Generate & Send OTP
         const otp = generateOtp();
-        const expiresAt = new Date(Date.now() + 10 * 60000).toISOString(); // 10 mins
+        const expiresAt = new Date(Date.now() + 10 * 60000).toISOString();
 
         await db.execute({
             sql: "INSERT INTO otps (id, email, otp_code, purpose, expires_at) VALUES (?, ?, ?, ?, ?)",
@@ -92,7 +78,7 @@ app.post("/api/auth/register", async (req, res) => {
 });
 
 // 2. Verify OTP for Registration
-app.post("/api/auth/verify", async (req, res) => {
+app.post("/api/auth/verify", async (req: Request, res: Response) => {
     try {
         const { email, otp } = req.body;
         const now = new Date().toISOString();
@@ -106,16 +92,13 @@ app.post("/api/auth/verify", async (req, res) => {
             return res.status(400).json({ error: "Invalid or expired OTP" });
         }
 
-        // Mark user as verified
         await db.execute({
             sql: "UPDATE users SET is_verified = 1 WHERE email = ?",
             args: [email],
         });
 
-        // Delete used OTP
         await db.execute({ sql: "DELETE FROM otps WHERE id = ?", args: [otpResult.rows[0].id] });
 
-        // Fetch user to return
         const userResult = await db.execute({
             sql: "SELECT id, name, email FROM users WHERE email = ?",
             args: [email],
@@ -129,10 +112,10 @@ app.post("/api/auth/verify", async (req, res) => {
 });
 
 // 3. Login
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
-        const passwordHash = await hashPassword(password);
+        const passwordHash = hashPassword(password);
 
         const result = await db.execute({
             sql: "SELECT id, name, email, is_verified FROM users WHERE email = ? AND password_hash = ?",
@@ -146,7 +129,6 @@ app.post("/api/auth/login", async (req, res) => {
         const user = result.rows[0];
 
         if (!user.is_verified) {
-            // Re-send OTP
             const otp = generateOtp();
             const expiresAt = new Date(Date.now() + 10 * 60000).toISOString();
             await db.execute({
@@ -166,11 +148,10 @@ app.post("/api/auth/login", async (req, res) => {
 });
 
 // 4. Request Password Reset
-app.post("/api/auth/forgot-password", async (req, res) => {
+app.post("/api/auth/forgot-password", async (req: Request, res: Response) => {
     try {
         const { email } = req.body;
 
-        // Check if user exists
         const userResult = await db.execute({ sql: "SELECT id FROM users WHERE email = ?", args: [email] });
 
         if (userResult.rows.length > 0) {
@@ -183,7 +164,6 @@ app.post("/api/auth/forgot-password", async (req, res) => {
             await sendOtpEmail(email, otp, "password_reset");
         }
 
-        // Always return success to prevent email enumeration
         res.json({ success: true, message: "If an account exists, a reset code was sent." });
     } catch (error) {
         console.error("Forgot PW Error:", error);
@@ -192,7 +172,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
 });
 
 // 5. Reset Password
-app.post("/api/auth/reset-password", async (req, res) => {
+app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
     try {
         const { email, otp, newPassword } = req.body;
         if (newPassword.length < 6) return res.status(400).json({ error: "Password too short" });
@@ -207,7 +187,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
             return res.status(400).json({ error: "Invalid or expired reset code" });
         }
 
-        const passwordHash = await hashPassword(newPassword);
+        const passwordHash = hashPassword(newPassword);
         await db.execute({
             sql: "UPDATE users SET password_hash = ? WHERE email = ?",
             args: [passwordHash, email],
@@ -223,14 +203,16 @@ app.post("/api/auth/reset-password", async (req, res) => {
 });
 
 // 6. Google OAuth Login/Register
-import { OAuth2Client } from "google-auth-library";
 const googleClient = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 
-app.post("/api/auth/google", async (req, res) => {
+app.post("/api/auth/google", async (req: Request, res: Response) => {
     try {
         const { credential } = req.body;
 
-        // Verify the Google JWT token
+        if (!credential) {
+            return res.status(400).json({ error: "No credential provided" });
+        }
+
         const ticket = await googleClient.verifyIdToken({
             idToken: credential,
             audience: process.env.VITE_GOOGLE_CLIENT_ID,
@@ -244,15 +226,12 @@ app.post("/api/auth/google", async (req, res) => {
         const email = payload.email;
         const name = payload.name || "Google User";
 
-        // Check if user exists
         const existing = await db.execute({
             sql: "SELECT id, name, email FROM users WHERE email = ?",
             args: [email],
         });
 
         if (existing.rows.length > 0) {
-            // User exists, log them in (even if they originally registered with email/password)
-            // Mark them as verified just in case they weren't
             await db.execute({
                 sql: "UPDATE users SET is_verified = 1 WHERE email = ?",
                 args: [email],
@@ -260,11 +239,9 @@ app.post("/api/auth/google", async (req, res) => {
             const user = existing.rows[0];
             return res.json({ success: true, user: { id: user.id, name: user.name, email: user.email } });
         } else {
-            // User doesn't exist, create account automatically
             const id = generateId();
-            // Create a random impossibly long password hash since they use Google
-            const randomPassword = crypto.randomBytes(32).toString('hex');
-            const passwordHash = await hashPassword(randomPassword);
+            const randomPassword = crypto.randomBytes(32).toString("hex");
+            const passwordHash = hashPassword(randomPassword);
 
             await db.execute({
                 sql: "INSERT INTO users (id, name, email, password_hash, is_verified) VALUES (?, ?, ?, ?, 1)",
@@ -284,10 +261,12 @@ app.post("/api/auth/google", async (req, res) => {
     }
 });
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+// Health check
+app.get("/api/health", (_req: Request, res: Response) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 // Export the Express API for Vercel Serverless Functions
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // Vercel handles requests differently, so let express consume it
     return app(req as any, res as any);
 }
