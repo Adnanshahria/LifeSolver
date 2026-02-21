@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTasks } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -35,7 +36,7 @@ import {
 
 const mainNavItems = [
   { icon: LayoutDashboard, label: "Home", path: "/dashboard" },
-  { icon: ListTodo, label: "Tasks", path: "/tasks", badge: "21", badgeType: "primary" },
+  { icon: ListTodo, label: "Tasks", path: "/tasks" },
   { icon: Wallet, label: "Finance", path: "/finance" },
   { icon: StickyNote, label: "Notes", path: "/notes" },
   { icon: Package, label: "Inventory", path: "/inventory" },
@@ -83,15 +84,16 @@ function NavItem({ item, isCollapsed, isActive }: NavItemProps) {
             </span>
             {item.badge && (
               <div className={cn(
-                "text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[20px] text-center shrink-0",
-                item.badgeType === "primary" ? "bg-red-500 text-white" : "bg-secondary text-muted-foreground"
+                "text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[24px] flex items-center justify-center shrink-0 z-10",
+                item.badgeType === "primary" ? "bg-red-500 text-white shadow-sm" : "bg-secondary text-muted-foreground",
+                isActive ? "mr-6" : ""
               )}>
                 {item.badge}
               </div>
             )}
             {isActive && (
-              <div className="absolute right-3">
-                <ChevronRight className="w-3.5 h-3.5 text-primary opacity-70" />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 z-0">
+                <ChevronRight className="w-4 h-4 text-primary opacity-80" />
               </div>
             )}
           </>
@@ -111,6 +113,16 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const { tasks } = useTasks();
+
+  const pendingTasksCount = tasks.filter(t => t.status !== "done").length;
+
+  const dynamicMainNavItems = mainNavItems.map(item => {
+    if (item.label === "Tasks" && pendingTasksCount > 0) {
+      return { ...item, badge: pendingTasksCount.toString(), badgeType: "primary" };
+    }
+    return item;
+  });
 
   const handleLogout = () => {
     logout();
@@ -154,7 +166,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         {/* Main Menu */}
         <div className="space-y-1">
           {!isCollapsed && <p className="text-[10px] font-bold text-muted-foreground/70 px-3 mb-2 tracking-wider">MENU</p>}
-          {mainNavItems.map(item => (
+          {dynamicMainNavItems.map(item => (
             <NavItem
               key={item.path}
               item={item}
